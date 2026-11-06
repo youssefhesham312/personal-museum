@@ -6,8 +6,36 @@ bucket. Nothing in this guide creates or changes database rows or R2 objects.
 
 Project URL: `https://hnfgipdsptvettactslu.supabase.co`
 
-> The current working tree is not committed. Cloudflare Pages builds from Git,
-> so commit and push the deployment changes before connecting the repository.
+> **This project currently deploys as a Cloudflare Worker with static assets**
+> (Workers Builds), not as a Pages project. See §0 for the exact settings. The
+> rest of this guide describes the equivalent Pages setup and remains valid if
+> you create a Pages project instead.
+
+---
+
+## 0. Current setup — Workers Builds (static assets)
+
+`wrangler.jsonc` at the repository root serves the Vite build from `./dist` and
+falls back to `index.html` for `/m/<id>`.
+
+| Setting | Value |
+| --- | --- |
+| Worker / project name | `personal-museum` (must match `name` in `wrangler.jsonc`) |
+| Root directory | `/` |
+| Build command | `npm run build:deploy` |
+| Deploy command | `npx wrangler deploy` |
+| Build variables | `NODE_VERSION=22`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
+
+The variable names are exact and case-sensitive. A typo such as
+`VITE_SUPABASE_UR` makes `check:deploy` fail with "Sharing is not configured."
+
+Unlike Pages, Workers does not share build-time variables with runtime
+variables. Put the two public Supabase values in the **build** environment.
+Workers static assets support the `public/_redirects` fallback natively.
+
+The deployed origin is `https://<worker-name>.<account-subdomain>.workers.dev`
+(or a custom domain). Add that exact origin to both CORS lists in §3 after the
+first deploy.
 
 ---
 

@@ -28,6 +28,7 @@ Thumbs.db
 # Cache
 .cache/
 .vite/
+.wrangler/
 .eslintcache
 
 # TypeScript

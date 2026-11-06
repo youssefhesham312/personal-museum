@@ -1,0 +1,14 @@
+{
+  // Cloudflare Workers static assets deployment.
+  // Workers Builds runs `npm run build:deploy`, then `npx wrangler deploy`.
+  // The Worker name must match the project name in the Cloudflare dashboard.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "personal-museum",
+  "compatibility_date": "2026-11-07",
+  "assets": {
+    "directory": "./dist",
+    // Serve index.html for /m/<id> and other client-side routes.
+    // public/_redirects contains the same fallback for Pages-compatible hosts.
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -113,12 +113,16 @@ subdirectory) unless you also change `buildShareUrl` and the fallback.
 `?demo=1` also exposes `window.__museumDebug` (camera, raycast, frame list, build
 time) for scripted QA. It is not created on the normal path.
 
-### Deploying to Cloudflare Pages
+### Deploying to Cloudflare
 
-Use the repository root, build command `npm run build:deploy`, output directory
-`dist`, and Node 22. Set only the public `VITE_SUPABASE_URL` and
-`VITE_SUPABASE_ANON_KEY` variables in Pages. Add the deployed origin to both the
-Edge Function and R2 CORS policies.
+The current deployment uses **Cloudflare Workers with static assets** through
+Workers Builds. Use the repository root, build command `npm run build:deploy`,
+deploy command `npx wrangler deploy`, and Node 22. Set only the public
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` build variables. Add the
+deployed origin to both the Edge Function and R2 CORS policies.
+
+`wrangler.jsonc` serves `dist/` as static assets with a single-page-app fallback,
+and `public/_redirects` provides the same fallback for Pages-compatible hosts.
 
 The full runbook, including the exact environment variables, CORS JSON, custom
 domain notes and post-deploy checks, is in [`DEPLOYMENT.md`](DEPLOYMENT.md).
