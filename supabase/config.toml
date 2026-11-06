@@ -1,0 +1,14 @@
+# Supabase CLI project configuration for the museum-api Edge Function.
+#
+# The function implements its own validation and authorization:
+#   - public reads only return finalized, unexpired museums
+#   - creation is validated and rate-limited
+#   - cleanup requires a separate high-entropy secret header
+#
+# Gateway JWT verification is therefore disabled so the public publishable key
+# (and future non-JWT `sb_publishable_...` keys) work consistently. The
+# service-role key never leaves the function environment.
+project_id = "personal-museum"
+
+[functions.museum-api]
+verify_jwt = false

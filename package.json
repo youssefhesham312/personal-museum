@@ -9,9 +9,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:deploy": "npm run check:deploy && vite build",
+    "check:deploy": "node scripts/check-deploy-env.mjs",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:unit": "vitest run --exclude 'tests/integration/**'",
+    "test:integration": "vitest run tests/integration/museum-api.integration.test.js"
   },
   "keywords": [],
   "author": "",

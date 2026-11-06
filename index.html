@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Personal Museum</title>
   <meta name="description" content="A personal 3D virtual photo gallery" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-    #canvas { display: block; width: 100%; height: 100%; }
+    #canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
     #overlay {
       position: fixed;
@@ -91,6 +91,27 @@
       letter-spacing: 1px;
     }
 
+    .menu-panel .upload-status {
+      font-size: 12px;
+      line-height: 1.55;
+      letter-spacing: 0.2px;
+      color: #a09080;
+      margin: -6px 0 14px;
+      min-height: 0;
+    }
+
+    .menu-panel .upload-status:empty {
+      display: none;
+    }
+
+    .menu-panel .upload-status.is-warn {
+      color: #e0bf8a;
+    }
+
+    .menu-panel .upload-status.is-error {
+      color: #e39a8a;
+    }
+
     .menu-panel .mute-btn {
       width: auto;
       display: inline-block;
@@ -150,8 +171,14 @@
     <p class="loading-title">Preparing Your Exhibition</p>
     <div class="loading-spinner"></div>
     <p class="loading-status">Building gallery rooms...</p>
+    <button class="loading-cancel" type="button" data-action="cancel">Cancel</button>
+    <p class="loading-error"></p>
+    <div class="loading-actions">
+      <button type="button" data-action="retry">Try again</button>
+      <button type="button" data-action="cancel">Back to menu</button>
+    </div>
   </div>
-  <audio id="bg-music" preload="auto"></audio>
+  <audio id="bg-music" preload="none"></audio>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

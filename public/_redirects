@@ -1,0 +1,4 @@
+# Single-page app fallback for static hosts (Netlify, Cloudflare Pages and
+# compatible hosts). Shared museum links use /m/<public-id>, which is resolved
+# by the client, so those requests must return index.html.
+/*  /index.html  200

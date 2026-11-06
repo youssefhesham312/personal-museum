@@ -1,10 +1,117 @@
 import * as THREE from 'three';
 
-const WALL_COLOR = 0xf5f0e8;     // warm off-white
-const FLOOR_COLOR = 0x3b2f1e;    // dark hardwood
-const CEILING_COLOR = 0xfaf6f0;  // slightly lighter than walls
+const WALL_COLOR = 0xf6ecdd;      // warm parchment
+const FLOOR_COLOR = 0x4b3927;     // warm hardwood (fallback without canvas)
+const CEILING_COLOR = 0xf6efe3;   // slightly lighter than walls
 const BASEBOARD_COLOR = 0x2a2018; // dark strip
-const WALL_THICKNESS = 0.2;      // 20cm thick walls
+const WALL_THICKNESS = 0.2;       // 20cm thick walls
+
+const WOOD_SIZE = 512;
+const PLANK_ROWS = 4;
+
+/**
+ * Very low-contrast plaster for the walls.
+ *
+ * Flat colour walls read like cardboard under a warm light rig; a little
+ * mottling gives them depth without adding geometry. Returns null in Node so
+ * room creation stays DOM-free for unit tests.
+ */
+function createPlasterTexture() {
+  if (typeof document === 'undefined') return null;
+
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#fbf6ec';
+  ctx.fillRect(0, 0, size, size);
+
+  // Soft cloudy patches.
+  for (let i = 0; i < 70; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const radius = 10 + Math.random() * 40;
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    const alpha = 0.01 + Math.random() * 0.018;
+    gradient.addColorStop(0, `rgba(150, 124, 96, ${alpha})`);
+    gradient.addColorStop(1, 'rgba(150, 124, 96, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  // Fine grain.
+  for (let i = 0; i < 700; i++) {
+    ctx.fillStyle = `rgba(120, 98, 76, ${0.008 + Math.random() * 0.014})`;
+    ctx.fillRect(Math.random() * size, Math.random() * size, 1.2, 1.2);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+/**
+ * Procedural dark hardwood for the floor.
+ *
+ * Returns null when there is no DOM (unit tests), so `createRoom` can stay a
+ * pure geometry function there.
+ */
+function createWoodTexture(repeatX, repeatY) {
+  if (typeof document === 'undefined') return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = WOOD_SIZE;
+  canvas.height = WOOD_SIZE;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.fillStyle = '#4a3826';
+  ctx.fillRect(0, 0, WOOD_SIZE, WOOD_SIZE);
+
+  // Planks
+  const plankHeight = WOOD_SIZE / PLANK_ROWS;
+  for (let row = 0; row < PLANK_ROWS; row++) {
+    const shade = 58 + Math.round(Math.random() * 14);
+    ctx.fillStyle = `rgb(${shade + 26}, ${shade + 8}, ${shade - 10})`;
+    ctx.fillRect(0, row * plankHeight, WOOD_SIZE, plankHeight - 1);
+
+    // Grain
+    for (let line = 0; line < 26; line++) {
+      const y = row * plankHeight + Math.random() * plankHeight;
+      const alpha = 0.04 + Math.random() * 0.08;
+      ctx.strokeStyle = `rgba(20, 12, 6, ${alpha})`;
+      ctx.lineWidth = 0.6 + Math.random() * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.bezierCurveTo(
+        WOOD_SIZE * 0.33, y + (Math.random() - 0.5) * 6,
+        WOOD_SIZE * 0.66, y + (Math.random() - 0.5) * 6,
+        WOOD_SIZE, y + (Math.random() - 0.5) * 4
+      );
+      ctx.stroke();
+    }
+
+    // Plank seam
+    ctx.fillStyle = 'rgba(12, 8, 4, 0.55)';
+    ctx.fillRect(0, row * plankHeight, WOOD_SIZE, 1.5);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(repeatX, repeatY);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 /**
  * Create a single room.
@@ -18,10 +125,28 @@ const WALL_THICKNESS = 0.2;      // 20cm thick walls
 export function createRoom({ width, depth, height, doorways = [] }) {
   const group = new THREE.Group();
   const wallSegments = [];
-  const wallMat = new THREE.MeshStandardMaterial({ color: WALL_COLOR });
-  const floorMat = new THREE.MeshStandardMaterial({ color: FLOOR_COLOR, side: THREE.DoubleSide });
-  const ceilMat = new THREE.MeshStandardMaterial({ color: CEILING_COLOR, side: THREE.DoubleSide });
-  const baseboardMat = new THREE.MeshStandardMaterial({ color: BASEBOARD_COLOR });
+
+  const plasterTexture = createPlasterTexture();
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: WALL_COLOR,
+    map: plasterTexture,
+    roughness: 0.97,
+  });
+  const woodTexture = createWoodTexture(width / 3.2, depth / 3.2);
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: woodTexture ? 0xffffff : FLOOR_COLOR,
+    map: woodTexture,
+    roughness: 0.58,
+    metalness: 0.02,
+  });
+  const ceilMat = new THREE.MeshStandardMaterial({
+    color: CEILING_COLOR,
+    side: THREE.DoubleSide,
+    roughness: 1,
+    emissive: 0xf2e2c8,
+    emissiveIntensity: 0.32,
+  });
+  const baseboardMat = new THREE.MeshStandardMaterial({ color: BASEBOARD_COLOR, roughness: 0.7 });
 
   // Floor
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), floorMat);

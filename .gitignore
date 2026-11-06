@@ -7,6 +7,8 @@ dist/
 # Environment
 .env
 .env.local
+.env.*
+!.env.example
 .env.*.local
 
 # Editor
@@ -30,6 +32,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Supabase CLI local state
+.supabase/
+supabase/.temp/
+supabase/.branches/
 
 # Claude
 .claude
