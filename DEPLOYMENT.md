@@ -31,7 +31,10 @@ The variable names are exact and case-sensitive. A typo such as
 
 Unlike Pages, Workers does not share build-time variables with runtime
 variables. Put the two public Supabase values in the **build** environment.
-Workers static assets support the `public/_redirects` fallback natively.
+
+Do **not** add a catch-all `/* /index.html 200` `_redirects` file to a Workers
+deployment: Cloudflare rejects it with `Infinite loop detected in this rule`.
+The equivalent fallback is `assets.not_found_handling` in `wrangler.jsonc`.
 
 The deployed origin is `https://<worker-name>.<account-subdomain>.workers.dev`
 (or a custom domain). Add that exact origin to both CORS lists in §3 after the
@@ -167,15 +170,17 @@ Let Pages build from Git. Do not upload the local `dist/` directory: it is a
 generated build that may contain whatever values happened to be in your local
 environment. The Pages build must receive the environment variables from §2.
 
-The repository already contains `public/_redirects`:
+This repository no longer ships `public/_redirects`; the Workers deployment uses
+`not_found_handling` instead. If you create a Pages project from this repository,
+add a `public/_redirects` file first:
 
 ```text
 /*  /index.html  200
 ```
 
-Vite copies it to `dist/_redirects`. Cloudflare Pages uses it to return
-`index.html` for `/m/<id>` so a shared museum works on first load and after a
-refresh. Do not replace it with a `404.html`-only fallback.
+Vite copies it to `dist/_redirects`. Cloudflare Pages then returns `index.html`
+for `/m/<id>` so a shared museum works on first load and after a refresh. Do not
+add that file while deploying to Workers.
 
 ---
 
@@ -216,7 +221,7 @@ they were created with.
 npm ci
 npm run check:deploy   # requires real VITE_* values
 npm run build:deploy
-npm run preview        # serves dist locally; does not emulate _redirects
+npm run preview        # serves dist locally; does not emulate the Workers SPA fallback
 ```
 
 `npm run build` still works without backend values for local-only previews.
@@ -236,7 +241,8 @@ expected; it is not a deployment failure.
 | `check:deploy` fails locally | `.env.local` still has `.env.example` placeholders | Put the real public URL/key in `.env.local` |
 | Browser CORS error calling `museum-api` | Pages origin missing from `MUSEUM_ALLOWED_ORIGINS` | Add the exact origin, redeploy the function |
 | Browser CORS error uploading or loading photos | Pages origin missing from R2 CORS, or `PUT`/`GET`/`content-type` missing | Update the bucket CORS policy |
-| `/m/<id>` works in the app but 404s on refresh | `_redirects` missing from `dist` | Confirm `public/_redirects` exists and rebuild |
+| `/m/<id>` works in the app but 404s on refresh | Workers SPA fallback missing | Confirm `assets.not_found_handling` is `single-page-application` in `wrangler.jsonc` |
+| Deploy fails: `Infinite loop detected in this rule` | A catch-all `_redirects` was uploaded to Workers | Delete `public/_redirects`; use `not_found_handling` for Workers |
 | Build fails on Cloudflare with an old Node version | Pages did not pick Node 22 | Set `NODE_VERSION=22` and retry |
 | Share link uses a `pages.dev` host after attaching a domain | Link was created before the custom domain | Create a new link from the custom-domain origin |
 | Upload 403 `SignatureDoesNotMatch` | Browser sent a different `Content-Type` than was signed, or R2 credentials/bucket are wrong | Check R2 secrets and CORS; do not transform the upload content type |

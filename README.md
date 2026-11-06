@@ -105,10 +105,11 @@ batch is still added.
 | `?demo=1&photos=15` | Bundled demo at another size (5, 10, 15 are useful) |
 
 `/m/<id>` is resolved by the client, so the host must return `index.html` for
-unknown paths. `public/_redirects` provides this for Netlify, Cloudflare Pages
-and compatible hosts. Configure an equivalent SPA fallback elsewhere. Share URLs
-are built as `<origin>/m/<id>`, so deploy the app at the origin root (not a
-subdirectory) unless you also change `buildShareUrl` and the fallback.
+unknown paths. `wrangler.jsonc` sets `not_found_handling: "single-page-application"`
+for Cloudflare Workers. A Cloudflare Pages or Netlify deployment instead needs
+an equivalent `_redirects` file (`/* /index.html 200`). Share URLs are built as
+`<origin>/m/<id>`, so deploy the app at the origin root (not a subdirectory)
+unless you also change `buildShareUrl` and the fallback.
 
 `?demo=1` also exposes `window.__museumDebug` (camera, raycast, frame list, build
 time) for scripted QA. It is not created on the normal path.
@@ -121,8 +122,9 @@ deploy command `npx wrangler deploy`, and Node 22. Set only the public
 `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` build variables. Add the
 deployed origin to both the Edge Function and R2 CORS policies.
 
-`wrangler.jsonc` serves `dist/` as static assets with a single-page-app fallback,
-and `public/_redirects` provides the same fallback for Pages-compatible hosts.
+`wrangler.jsonc` serves `dist/` as static assets with a single-page-app fallback.
+Workers rejects a catch-all `_redirects` rule as an infinite loop, so the
+fallback lives in the Wrangler configuration instead.
 
 The full runbook, including the exact environment variables, CORS JSON, custom
 domain notes and post-deploy checks, is in [`DEPLOYMENT.md`](DEPLOYMENT.md).
