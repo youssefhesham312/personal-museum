@@ -35,6 +35,8 @@ variables. Put the two public Supabase values in the **build** environment.
 Do **not** add a catch-all `/* /index.html 200` `_redirects` file to a Workers
 deployment: Cloudflare rejects it with `Infinite loop detected in this rule`.
 The equivalent fallback is `assets.not_found_handling` in `wrangler.jsonc`.
+`public/.assetsignore` also excludes any `_redirects` left by a stale build
+cache, so an old artifact cannot fail the deploy.
 
 The deployed origin is `https://<worker-name>.<account-subdomain>.workers.dev`
 (or a custom domain). Add that exact origin to both CORS lists in §3 after the

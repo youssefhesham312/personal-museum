@@ -1,0 +1,4 @@
+# Cloudflare Workers rejects the Pages catch-all `/* /index.html 200` rule as an
+# infinite loop. The SPA fallback lives in wrangler.jsonc instead, so a stray
+# `_redirects` from an old build cache must never be uploaded.
+_redirects
