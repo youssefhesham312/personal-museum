@@ -147,7 +147,6 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
   layer.addEventListener('pointermove', onPointerMove);
   layer.addEventListener('pointerup', onPointerUp);
   layer.addEventListener('pointercancel', onPointerCancel);
-  layer.addEventListener('pointerleave', onPointerCancel);
   layer.addEventListener('contextmenu', onContextMenu);
   window.addEventListener('blur', reset);
   window.addEventListener('orientationchange', reset);
@@ -163,7 +162,6 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
       layer.removeEventListener('pointermove', onPointerMove);
       layer.removeEventListener('pointerup', onPointerUp);
       layer.removeEventListener('pointercancel', onPointerCancel);
-      layer.removeEventListener('pointerleave', onPointerCancel);
       layer.removeEventListener('contextmenu', onContextMenu);
       window.removeEventListener('blur', reset);
       window.removeEventListener('orientationchange', reset);
