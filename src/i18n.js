@@ -221,7 +221,7 @@ const AR = {
   'app.metaDescription': 'معرض صور ثلاثي الأبعاد شخصي',
 
   'language.switchToArabic': 'التبديل إلى العربية',
-  'language.switchToEnglish': 'Switch to English',
+  'language.switchToEnglish': 'التبديل إلى الإنجليزية',
   'language.arabic': 'العربية',
   'language.english': 'English',
 
