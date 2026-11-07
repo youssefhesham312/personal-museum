@@ -12,6 +12,7 @@ import { createShareableMuseum } from '../backend/shareFlow.js';
 import { buildShareUrl } from '../backend/shareLink.js';
 import { friendlyMuseumError, MuseumApiError } from '../backend/api.js';
 import { validateCreatorDetails } from '../backend/creatorValidation.js';
+import { getLanguage, locale, t, toggleLanguage } from '../i18n.js';
 
 const DETAILS_KEY = 'museum-creator-details';
 const MAX_PHOTOS = MUSEUM_LIMITS.maxPhotos;
@@ -32,7 +33,6 @@ let refreshOverlayState = null;
 // Photo editor state: IndexedDB is the source of truth, the DOM is rebuilt only
 // when the set/order changes so typing never loses focus.
 let photoItems = [];
-let photoUrls = [];
 let photoGalleryEl = null;
 let draftStatusEl = null;
 let dragPhotoId = null;
@@ -59,7 +59,7 @@ function saveDetails(details) {
 function formatExpiry(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return date.toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function initOverlay({ onStart, audio }) {
@@ -71,65 +71,71 @@ export function initOverlay({ onStart, audio }) {
     backendReady = true;
   } catch (error) {
     backendReady = false;
-    backendMessage = error?.message || 'Sharing is not configured.';
+    backendMessage = t('errors.sharingNotConfigured');
   }
 
   const overlay = document.getElementById('overlay');
+  const isArabic = getLanguage() === 'ar';
+  const switchLabel = isArabic ? t('language.english') : t('language.arabic');
+  const switchAria = isArabic ? t('language.switchToEnglish') : t('language.switchToArabic');
 
   overlay.innerHTML = `
     <div class="menu-panel creator-panel">
-      <h1>Personal Museum</h1>
-      <p class="subtitle">A gallery you can send to someone</p>
+      <div class="creator-topbar">
+        <button class="lang-toggle" id="lang-toggle" type="button" aria-label="${switchAria}">${switchLabel}</button>
+      </div>
+      <h1>${t('app.title')}</h1>
+      <p class="subtitle">${t('app.subtitle')}</p>
 
       <div class="creator-fields">
         <label class="creator-field" for="museum-title">
-          <span>Museum title</span>
-          <input id="museum-title" type="text" maxlength="${MUSEUM_LIMITS.maxTitleLength}" autocomplete="off" placeholder="Moments for Noor" />
+          <span>${t('creator.museumTitle')}</span>
+          <input id="museum-title" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxTitleLength}" autocomplete="off" placeholder="${t('creator.museumTitlePlaceholder')}" />
           <small class="field-error" data-error-for="title"></small>
         </label>
 
         <label class="creator-field" for="museum-recipient">
-          <span>Recipient's name</span>
-          <input id="museum-recipient" type="text" maxlength="${MUSEUM_LIMITS.maxNameLength}" autocomplete="off" placeholder="Noor" />
+          <span>${t('creator.recipient')}</span>
+          <input id="museum-recipient" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxNameLength}" autocomplete="off" placeholder="${t('creator.recipientPlaceholder')}" />
           <small class="field-error" data-error-for="recipient"></small>
         </label>
 
         <label class="creator-field" for="museum-dedication">
-          <span>Dedication <em>optional</em></span>
-          <textarea id="museum-dedication" rows="2" maxlength="${MUSEUM_LIMITS.maxDedicationLength}" placeholder="A few words for the entrance hall"></textarea>
+          <span>${t('creator.dedication')} <em>${t('creator.optional')}</em></span>
+          <textarea id="museum-dedication" rows="2" dir="auto" maxlength="${MUSEUM_LIMITS.maxDedicationLength}" placeholder="${t('creator.dedicationPlaceholder')}"></textarea>
           <small class="field-error" data-error-for="dedication"></small>
         </label>
 
         <label class="creator-field" for="museum-final-message">
-          <span>Closing message</span>
-          <textarea id="museum-final-message" rows="3" maxlength="${MUSEUM_LIMITS.maxFinalMessageLength}" placeholder="The message waiting at the end of the museum"></textarea>
+          <span>${t('creator.finalMessage')}</span>
+          <textarea id="museum-final-message" rows="3" dir="auto" maxlength="${MUSEUM_LIMITS.maxFinalMessageLength}" placeholder="${t('creator.finalMessagePlaceholder')}"></textarea>
           <small class="field-error" data-error-for="finalMessage"></small>
         </label>
       </div>
 
-      <button id="upload-btn" type="button">Add Photos</button>
+      <button id="upload-btn" type="button">${t('creator.addPhotos')}</button>
       <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple />
       <p class="photo-count" id="photo-count"></p>
 
       <div class="photo-gallery-wrap" id="photo-gallery-wrap" hidden>
         <div class="photo-gallery-head">
-          <span>Photographs</span>
-          <span>Drag the handle or use the arrows to reorder</span>
+          <span>${t('creator.photographs')}</span>
+          <span>${t('creator.reorderHint')}</span>
         </div>
         <div class="photo-gallery" id="photo-gallery"></div>
       </div>
 
       <p class="upload-status" id="upload-status" role="status" aria-live="polite"></p>
-      <p class="draft-status" id="draft-status" hidden>Draft saved in this browser. Captions, dates and photo order are kept automatically.</p>
+      <p class="draft-status" id="draft-status" hidden>${t('creator.draftSaved')}</p>
 
-      <button id="start-btn" type="button" disabled>Preview the Tour</button>
-      <button id="share-btn" type="button" class="share-btn" disabled>Create Share Link</button>
+      <button id="start-btn" type="button" disabled>${t('creator.previewTour')}</button>
+      <button id="share-btn" type="button" class="share-btn" disabled>${t('creator.createShareLink')}</button>
       <p class="share-hint" id="share-hint" role="status" aria-live="polite"></p>
 
       <div class="share-progress" id="share-progress" hidden>
         <div class="share-progress-head">
-          <span id="share-progress-text">Preparing photographs…</span>
-          <button type="button" class="share-cancel" id="share-cancel">Cancel</button>
+          <span id="share-progress-text">${t('share.progress.preparing')}</span>
+          <button type="button" class="share-cancel" id="share-cancel">${t('share.cancel')}</button>
         </div>
         <div class="share-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="share-progress-track">
           <div class="share-progress-fill" id="share-progress-fill"></div>
@@ -137,27 +143,27 @@ export function initOverlay({ onStart, audio }) {
       </div>
 
       <div class="share-result" id="share-result" hidden>
-        <p class="share-result-title">Your museum is ready</p>
+        <p class="share-result-title">${t('share.title')}</p>
         <div class="share-url-row">
-          <input id="share-url" type="text" readonly aria-label="Shareable museum link" />
-          <button type="button" id="copy-share">Copy</button>
+          <input id="share-url" type="text" dir="ltr" readonly aria-label="${t('share.urlLabel')}" />
+          <button type="button" id="copy-share">${t('share.copy')}</button>
         </div>
         <div class="share-result-actions">
-          <a id="open-share" href="#" target="_blank" rel="noopener">Open museum</a>
+          <a id="open-share" href="#" target="_blank" rel="noopener">${t('share.open')}</a>
           <span class="copy-status" id="copy-status" role="status" aria-live="polite"></span>
         </div>
         <p class="share-expiry" id="share-expiry"></p>
-        <p class="menu-note">Anyone with this link can view the museum. It cannot edit or delete anything.</p>
+        <p class="menu-note">${t('share.note')}</p>
       </div>
 
-      <button class="mute-btn" id="reset-btn" type="button" style="display:none">Reset Photos</button>
+      <button class="mute-btn" id="reset-btn" type="button" style="display:none">${t('creator.resetPhotos')}</button>
 
       <div class="audio-row">
-        <button class="mute-btn" id="play-btn" type="button">▶ Play Music</button>
-        <button class="mute-btn" id="mute-btn" type="button">♪ Music: On</button>
+        <button class="mute-btn" id="play-btn" type="button">${t('creator.playMusic')}</button>
+        <button class="mute-btn" id="mute-btn" type="button">${t('creator.musicOn')}</button>
       </div>
 
-      <p class="menu-note">Share links are view-only and close automatically seven days after creation.</p>
+      <p class="menu-note">${t('creator.shareNote')}</p>
     </div>
   `;
 
@@ -180,6 +186,7 @@ export function initOverlay({ onStart, audio }) {
   const resetBtn = document.getElementById('reset-btn');
   const playBtn = document.getElementById('play-btn');
   const muteBtn = document.getElementById('mute-btn');
+  const langToggle = document.getElementById('lang-toggle');
   photoGalleryEl = document.getElementById('photo-gallery');
   draftStatusEl = document.getElementById('draft-status');
 
@@ -208,28 +215,28 @@ export function initOverlay({ onStart, audio }) {
     const total = Number(progress.total) || 0;
     const completed = Number(progress.completed) || 0;
     let percent = 0;
-    let text = 'Preparing photographs…';
+    let text = t('share.progress.preparing');
 
     if (progress.phase === 'preparing') {
       percent = total > 0 ? Math.round((Number(progress.index) / total) * 25) : 5;
-      text = `Preparing photograph ${Number(progress.index) + 1} of ${total}…`;
+      text = t('share.progress.photo', { index: Number(progress.index) + 1, total });
     } else if (progress.phase === 'creating') {
       percent = 28;
-      text = 'Creating your museum…';
+      text = t('share.progress.creating');
     } else if (progress.phase === 'uploading') {
       const totalBytes = Number(progress.totalBytes) || 0;
       const loadedBytes = Number(progress.loadedBytes) || 0;
       const ratio = totalBytes > 0 ? loadedBytes / totalBytes : (total > 0 ? completed / total : 0);
       percent = Math.min(92, 30 + Math.round(ratio * 60));
       text = completed >= total && total > 0
-        ? 'Finishing uploads…'
-        : `Uploading photograph ${Math.min(completed + 1, total)} of ${total}…`;
+        ? t('share.progress.finishing')
+        : t('share.progress.uploading', { index: Math.min(completed + 1, total), total });
     } else if (progress.phase === 'finalizing') {
       percent = 94;
-      text = 'Checking every photograph…';
+      text = t('share.progress.verifying');
     } else if (progress.phase === 'done') {
       percent = 100;
-      text = 'Ready.';
+      text = t('share.progress.ready');
     }
 
     shareProgressText.textContent = text;
@@ -272,7 +279,7 @@ export function initOverlay({ onStart, audio }) {
   function markShareStale() {
     if (!shareResult) return;
     hideShareResult();
-    shareNotice = 'Details or photographs changed. Create a new link to include the changes.';
+    shareNotice = t('creator.shareStale');
   }
 
   function refreshValidation() {
@@ -285,19 +292,21 @@ export function initOverlay({ onStart, audio }) {
     let hint = '';
 
     if (!backendReady) {
-      hint = `${backendMessage} Local preview still works.`;
+      hint = t('creator.shareNotConfigured', { message: backendMessage });
     } else if (sharing) {
-      hint = 'Creating your share link…';
+      hint = t('creator.creatingShare');
     } else if (photoCount > MAX_PHOTOS) {
-      hint = `A museum can hold at most ${MAX_PHOTOS} photographs. Remove some to share.`;
+      hint = t('creator.tooManyToShare', { max: MAX_PHOTOS });
     } else if (missingCount > 0) {
-      hint = `Add ${missingCount} more photograph${missingCount === 1 ? '' : 's'} to create a share link.`;
+      hint = missingCount === 1
+        ? t('creator.addOneMore', { count: missingCount })
+        : t('creator.addMore', { count: missingCount });
     } else if (!validation.ok) {
-      hint = 'Add a title, the recipient’s name and a closing message.';
+      hint = t('creator.addDetails');
     } else if (shareNotice) {
       hint = shareNotice;
     } else {
-      hint = 'Ready to create a view-only link.';
+      hint = t('creator.readyToShare');
     }
 
     shareHint.textContent = hint;
@@ -314,11 +323,11 @@ export function initOverlay({ onStart, audio }) {
     if (!countEl) return;
 
     if (uploading) {
-      countEl.textContent = 'Adding photos…';
+      countEl.textContent = t('creator.addingPhotos');
     } else if (photoCount === 0) {
-      countEl.textContent = 'No photos yet';
+      countEl.textContent = t('creator.noPhotos');
     } else {
-      countEl.textContent = `${photoCount} of ${MAX_PHOTOS} photos added`;
+      countEl.textContent = t('creator.photoCount', { count: photoCount, max: MAX_PHOTOS });
     }
 
     resetBtn.style.display = photoCount > 0 ? 'inline-block' : 'none';
@@ -340,22 +349,11 @@ export function initOverlay({ onStart, audio }) {
     shareUrlInput.value = url;
     openShare.setAttribute('href', url);
     shareExpiry.textContent = expiresAt
-      ? `Open until ${formatExpiry(expiresAt)}.`
-      : 'This museum closes seven days after creation.';
+      ? t('share.expiry', { date: formatExpiry(expiresAt) })
+      : t('share.closes');
     copyStatus.textContent = '';
     shareResultEl.hidden = false;
     shareProgress.hidden = true;
-  }
-
-  function revokePhotoUrls() {
-    for (const url of photoUrls) {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {
-        /* already revoked */
-      }
-    }
-    photoUrls = [];
   }
 
   function updateDraftStatus() {
@@ -373,7 +371,6 @@ export function initOverlay({ onStart, audio }) {
   function renderPhotoEditor() {
     if (!photoGalleryEl) return;
 
-    revokePhotoUrls();
     photoGalleryEl.innerHTML = '';
 
     const wrap = document.getElementById('photo-gallery-wrap');
@@ -381,41 +378,30 @@ export function initOverlay({ onStart, audio }) {
     if (photoItems.length === 0) return;
 
     photoItems.forEach((photo, photoPosition) => {
-      const url = URL.createObjectURL(photo.blob);
-      photoUrls.push(url);
       const humanPosition = photoPosition + 1;
-
       const card = document.createElement('div');
       card.className = 'photo-card';
       card.dataset.photoId = String(photo.id);
 
       const captionId = `photo-caption-${photo.id}`;
-      const dateId = `photo-date-${photo.id}`;
       card.innerHTML = `
-        <button class="photo-drag" type="button" data-drag-handle aria-label="Drag photograph ${humanPosition} to reorder" title="Drag to reorder">⋮⋮</button>
-        <div class="photo-thumb"><img alt="" /></div>
+        <button class="photo-drag" type="button" data-drag-handle aria-label="${t('creator.dragPhoto', { position: humanPosition })}" title="${t('creator.reorderHint')}">⋮⋮</button>
         <div class="photo-fields">
+          <p class="photo-name" dir="auto"></p>
           <label class="photo-field" for="${captionId}">
-            <span>Caption <em>optional</em></span>
-            <input id="${captionId}" type="text" data-photo-caption maxlength="${MUSEUM_LIMITS.maxCaptionLength}" placeholder="A few words about this photo" />
-          </label>
-          <label class="photo-field" for="${dateId}">
-            <span>Date <em>optional</em></span>
-            <input id="${dateId}" type="text" data-photo-date maxlength="${MUSEUM_LIMITS.maxDateLength}" placeholder="Summer 2025" />
+            <span>${t('creator.caption')} <em>${t('creator.optional')}</em></span>
+            <input id="${captionId}" type="text" dir="auto" data-photo-caption maxlength="${MUSEUM_LIMITS.maxCaptionLength}" placeholder="${t('creator.captionPlaceholder')}" />
           </label>
         </div>
         <div class="photo-actions">
-          <button type="button" data-move-up aria-label="Move photograph ${humanPosition} earlier" title="Move earlier">↑</button>
-          <button type="button" data-move-down aria-label="Move photograph ${humanPosition} later" title="Move later">↓</button>
-          <button type="button" data-remove aria-label="Remove photograph ${humanPosition}" title="Remove photo">×</button>
+          <button type="button" data-move-up aria-label="${t('creator.moveEarlier', { position: humanPosition })}" title="${t('creator.moveEarlierShort')}">↑</button>
+          <button type="button" data-move-down aria-label="${t('creator.moveLater', { position: humanPosition })}" title="${t('creator.moveLaterShort')}">↓</button>
+          <button type="button" data-remove aria-label="${t('creator.removePhoto', { position: humanPosition })}" title="${t('creator.removePhotoShort')}">×</button>
         </div>
       `;
 
-      const image = card.querySelector('img');
-      image.src = url;
-      image.alt = photo.caption ? `Photograph: ${photo.caption}` : 'Photograph';
+      card.querySelector('.photo-name').textContent = photo.name || t('inspect.photograph');
       card.querySelector('[data-photo-caption]').value = photo.caption || '';
-      card.querySelector('[data-photo-date]').value = photo.date || '';
       // Only the handle is draggable, so selecting caption text never starts a
       // drag and the inputs stay ordinary controls.
       card.querySelector('[data-drag-handle]').draggable = true;
@@ -443,8 +429,8 @@ export function initOverlay({ onStart, audio }) {
       photoSaveTimers.delete(id);
       const item = photoItems.find((photo) => photo.id === id);
       if (!item) return;
-      updatePhoto(id, { caption: item.caption, date: item.date }).catch((error) => {
-        console.error('[photos] caption/date could not be saved', error);
+      updatePhoto(id, { caption: item.caption }).catch((error) => {
+        console.error('[photos] the caption could not be saved', error);
       });
     }, 250);
     photoSaveTimers.set(id, timer);
@@ -458,8 +444,8 @@ export function initOverlay({ onStart, audio }) {
     }
     const item = photoItems.find((photo) => photo.id === id);
     if (!item) return;
-    updatePhoto(id, { caption: item.caption, date: item.date }).catch((error) => {
-      console.error('[photos] caption/date could not be saved', error);
+    updatePhoto(id, { caption: item.caption }).catch((error) => {
+      console.error('[photos] the caption could not be saved', error);
     });
   }
 
@@ -511,7 +497,7 @@ export function initOverlay({ onStart, audio }) {
       await deletePhoto(id);
     } catch (error) {
       console.error('[photos] the photo could not be removed', error);
-      setUploadStatus('The photo could not be removed. Try again.', 'error');
+      setUploadStatus(t('creator.removeFailed'), 'error');
       return;
     }
 
@@ -520,7 +506,7 @@ export function initOverlay({ onStart, audio }) {
     renderPhotoEditor();
     updatePhotoCount();
     markShareStale();
-    setUploadStatus('Photo removed.', 'ok');
+    setUploadStatus(t('creator.photoRemoved'), 'ok');
   }
 
   photoGalleryEl?.addEventListener('input', (event) => {
@@ -532,9 +518,8 @@ export function initOverlay({ onStart, audio }) {
     const item = photoItems.find((photo) => photo.id === id);
     if (!item) return;
 
-    if (input.matches('[data-photo-caption]')) item.caption = input.value;
-    else if (input.matches('[data-photo-date]')) item.date = input.value;
-    else return;
+    if (!input.matches('[data-photo-caption]')) return;
+    item.caption = input.value;
 
     markShareStale();
     updateDraftStatus();
@@ -611,6 +596,10 @@ export function initOverlay({ onStart, audio }) {
     });
   });
 
+  langToggle?.addEventListener('click', () => {
+    toggleLanguage({ reload: true });
+  });
+
   uploadBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (event) => {
@@ -618,13 +607,18 @@ export function initOverlay({ onStart, audio }) {
     if (files.length === 0) return;
 
     if (photoCount >= MAX_PHOTOS) {
-      setUploadStatus(`A museum can hold at most ${MAX_PHOTOS} photos. Remove some first.`, 'warn');
+      setUploadStatus(t('creator.tooManyPhotos', { max: MAX_PHOTOS }), 'warn');
       event.target.value = '';
       return;
     }
 
     uploading = true;
-    setUploadStatus(`Adding ${files.length} photo${files.length === 1 ? '' : 's'}…`, 'ok');
+    setUploadStatus(
+      files.length === 1
+        ? t('creator.addingCount')
+        : t('creator.addingCountPlural', { count: files.length }),
+      'ok'
+    );
     updatePhotoCount();
 
     try {
@@ -639,7 +633,7 @@ export function initOverlay({ onStart, audio }) {
     } catch (error) {
       console.error('[upload] the batch could not be processed', error);
       await loadPhotoEditor().catch(() => {});
-      setUploadStatus('The photos could not be added. Check browser storage and try again.', 'error');
+      setUploadStatus(t('creator.uploadFailed'), 'error');
     } finally {
       uploading = false;
       updatePhotoCount();
@@ -670,7 +664,7 @@ export function initOverlay({ onStart, audio }) {
 
     if (!validation.ok) {
       setUploadStatus(
-        validation.errors[0] || 'Add a title, the recipient’s name and a closing message.',
+        validation.errors[0] || t('creator.addDetails'),
         'error'
       );
       refreshValidation();
@@ -692,7 +686,7 @@ export function initOverlay({ onStart, audio }) {
       if (storedPhotos.length < MUSEUM_LIMITS.minPhotos || storedPhotos.length > MAX_PHOTOS) {
         throw new MuseumApiError(
           'invalid',
-          `A shareable museum needs ${MUSEUM_LIMITS.minPhotos}–${MAX_PHOTOS} photographs.`
+          t('creator.shareNeedsPhotos', { min: MUSEUM_LIMITS.minPhotos, max: MAX_PHOTOS })
         );
       }
 
@@ -700,7 +694,7 @@ export function initOverlay({ onStart, audio }) {
         photos: storedPhotos.map((photo) => ({
           blob: photo.blob,
           caption: photo.caption || '',
-          date: photo.date || '',
+          date: '',
         })),
         details: validation.value,
         signal: shareAbort.signal,
@@ -709,15 +703,13 @@ export function initOverlay({ onStart, audio }) {
 
       const url = buildShareUrl(result.publicId, window.location.origin);
       showShareResult(url, result.expiresAt);
-      setUploadStatus('Your museum is ready. Copy the link and send it.', 'ok');
+      setUploadStatus(t('creator.museumReady'), 'ok');
     } catch (error) {
       if (error?.code === 'cancelled') {
-        setUploadStatus('Share link creation cancelled.', 'warn');
+        setUploadStatus(t('creator.shareCancelled'), 'warn');
       } else {
         const message = friendlyMuseumError(error);
-        const cleanup = error?.cleanupPending
-          ? ' The unfinished upload will be removed automatically.'
-          : '';
+        const cleanup = error?.cleanupPending ? t('creator.cleanupPending') : '';
         setUploadStatus(`${message}${cleanup}`, 'error');
         if (error?.fields) setFieldErrors(error.fields);
       }
@@ -733,7 +725,7 @@ export function initOverlay({ onStart, audio }) {
   shareCancel.addEventListener('click', () => {
     if (!shareAbort) return;
     shareCancel.disabled = true;
-    shareProgressText.textContent = 'Cancelling…';
+    shareProgressText.textContent = t('share.progress.cancelling');
     shareAbort.abort();
   });
 
@@ -749,9 +741,9 @@ export function initOverlay({ onStart, audio }) {
         shareUrlInput.select();
         if (!document.execCommand('copy')) throw new Error('copy failed');
       }
-      copyStatus.textContent = 'Copied.';
+      copyStatus.textContent = t('share.copied');
     } catch {
-      copyStatus.textContent = 'Press Ctrl/Cmd+C to copy.';
+      copyStatus.textContent = t('share.copyManual');
       shareUrlInput.select();
     }
   });
@@ -777,8 +769,8 @@ export function initOverlay({ onStart, audio }) {
 
   if (audioApi) {
     unsubscribeAudio = audioApi.subscribe((state) => {
-      playBtn.textContent = state.playing ? '❚❚ Pause Music' : '▶ Play Music';
-      muteBtn.textContent = state.muted ? '♪ Music: Off' : '♪ Music: On';
+      playBtn.textContent = state.playing ? t('creator.pauseMusic') : t('creator.playMusic');
+      muteBtn.textContent = state.muted ? t('creator.musicOff') : t('creator.musicOn');
     });
   }
 

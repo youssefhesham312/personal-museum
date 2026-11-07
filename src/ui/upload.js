@@ -1,5 +1,6 @@
 import { savePhoto, getPhotoCount } from '../storage/db.js';
 import { MUSEUM_LIMITS } from '../../supabase/functions/_shared/validation.js';
+import { t } from '../i18n.js';
 
 const MAX_TEXTURE_SIZE = 2048;
 const MAX_INPUT_BYTES = 30 * 1024 * 1024;
@@ -44,15 +45,15 @@ export function looksLikeHeic(file) {
  */
 export function uploadFailureReason(file, error) {
   if (error?.name === 'QuotaExceededError') {
-    return 'browser storage is full';
+    return t('upload.reasonFull');
   }
   if (error?.name === 'InvalidStateError' || error?.name === 'UnknownError') {
-    return 'browser storage is unavailable';
+    return t('upload.reasonUnavailable');
   }
   if (looksLikeHeic(file)) {
-    return 'HEIC photos are not supported by this browser';
+    return t('upload.reasonHeic');
   }
-  return 'the file could not be read as an image';
+  return t('upload.reasonUnreadable');
 }
 
 /**
@@ -68,31 +69,36 @@ export function buildUploadSummary(result) {
   const limitSkipped = Math.max(0, Number(result?.limitSkipped) || 0);
   const heic = failed.some((entry) => looksLikeHeic(entry?.file ?? entry));
   const limitText = limitSkipped > 0
-    ? ` Only ${MUSEUM_LIMITS.maxPhotos} photos fit in a museum; ${limitSkipped} ${limitSkipped === 1 ? 'was' : 'were'} not added.`
+    ? t('upload.limitSkipped', { max: MUSEUM_LIMITS.maxPhotos, count: limitSkipped })
     : '';
 
   if (failed.length === 0) {
     return {
-      text: (added === 1 ? '1 photo added.' : `${added} photos added.`) + limitText,
+      text: (added === 1 ? t('upload.addedOne') : t('upload.addedMany', { count: added })) + limitText,
       tone: limitSkipped > 0 ? 'warn' : 'ok',
     };
   }
 
   const names = failed.slice(0, 2).map((file) => file.name).join(', ');
-  const extra = failed.length > 2 ? ` and ${failed.length - 2} more` : '';
-  const tip = heic
-    ? ' iPhone HEIC photos need to be exported as JPEG (or opened in Safari) first.'
-    : '';
+  const extra = failed.length > 2 ? t('upload.andMore', { count: failed.length - 2 }) : '';
+  const tip = heic ? t('upload.heicTip') : '';
 
   if (added === 0) {
     return {
-      text: `Nothing was added — ${names}${extra} could not be read.${tip}${limitText}`,
+      text: t('upload.noneAdded', { names, extra, tip, limit: limitText }),
       tone: 'error',
     };
   }
 
   return {
-    text: `${added} added, ${failed.length} skipped (${names}${extra}).${tip}${limitText}`,
+    text: t('upload.partial', {
+      added,
+      failed: failed.length,
+      names,
+      extra,
+      tip,
+      limit: limitText,
+    }),
     tone: 'warn',
   };
 }
@@ -160,12 +166,12 @@ export async function handleUpload(fileList, options = {}) {
 
   for (const file of accepted) {
     if (file.size > MAX_INPUT_BYTES) {
-      failed.push({ name: file.name, reason: 'the file is larger than 30 MB', file });
+      failed.push({ name: file.name, reason: t('upload.reasonTooLarge'), file });
       continue;
     }
 
     if (file.type && !file.type.startsWith('image/')) {
-      failed.push({ name: file.name, reason: 'not an image file', file });
+      failed.push({ name: file.name, reason: t('upload.reasonNotImage'), file });
       continue;
     }
 

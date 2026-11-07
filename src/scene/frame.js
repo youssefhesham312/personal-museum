@@ -75,17 +75,19 @@ function createCaptionPlane({ caption, date, planeWidth }) {
 
   if (text) {
     let size = 46;
-    ctx.font = `400 ${size}px Georgia, "Times New Roman", serif`;
+    const fontStack =
+      'Georgia, "Times New Roman", "Segoe UI", Tahoma, "Noto Naskh Arabic", "Traditional Arabic", serif';
+    ctx.font = `400 ${size}px ${fontStack}`;
     while (size > 26 && ctx.measureText(text).width > CAPTION_CANVAS_WIDTH - 64) {
       size -= 2;
-      ctx.font = `400 ${size}px Georgia, "Times New Roman", serif`;
+      ctx.font = `400 ${size}px ${fontStack}`;
     }
     ctx.fillStyle = CAPTION_INK;
     ctx.fillText(text, CAPTION_CANVAS_WIDTH / 2, when ? 52 : CAPTION_CANVAS_HEIGHT / 2);
   }
 
   if (when) {
-    ctx.font = 'italic 400 30px Georgia, "Times New Roman", serif';
+    ctx.font = 'italic 400 30px Georgia, "Times New Roman", "Segoe UI", Tahoma, "Noto Naskh Arabic", "Traditional Arabic", serif';
     ctx.fillStyle = CAPTION_MUTED;
     ctx.fillText(when, CAPTION_CANVAS_WIDTH / 2, 104);
   }

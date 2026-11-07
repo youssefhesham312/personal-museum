@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createRoom } from './room.js';
 import { createFinaleLight } from './lighting.js';
 import { createTextPlane } from './text.js';
+import { t } from '../i18n.js';
 
 const PAPER_COLOR = 0xf8f2e6;
 const BACKING_COLOR = 0x2c2118;
@@ -144,7 +145,9 @@ export function createFinale(descriptor, config = {}) {
   panel.add(paper);
 
   const heading = createTextPlane(
-    config.recipient ? `For ${config.recipient}` : 'For you',
+    config.recipient
+      ? t('finale.forRecipient', { recipient: config.recipient })
+      : t('finale.forYou'),
     {
       fontSize: 62,
       width: 1536,
@@ -158,7 +161,7 @@ export function createFinale(descriptor, config = {}) {
   heading.position.set(0, 1.02, 0.012);
   panel.add(heading);
 
-  const message = config.finalMessage || 'Thank you for walking through these memories.';
+  const message = config.finalMessage || t('finale.defaultMessage');
   const body = createTextPlane(message, {
     fontSize: 42,
     width: 1536,

@@ -17,9 +17,10 @@ seven days.
 - **Feature walls** — Walls with single large landscape paintings alongside standard gallery arrangements
 - **3D photo frames** — Aspect-ratio-preserving frames with a slim walnut molding, warm mat, brass liner and a printed caption card
 - **Warm gallery lighting** — A small shared rig (two ceiling lights per gallery, none per photo) keeps rooms readable without a light per frame
-- **Photo inspection** — Aim at a frame (or tap it, or use the View button) to read the full photo, caption and date
-- **Photo editor** — Per-photo captions and dates, drag or arrow reordering, individual removal
-- **Draft autosave** — Details, photos, captions, dates and order survive a reload in the same browser
+- **Photo inspection** - Aim at a frame (or tap it, or use the View button) to read the full photo and caption
+- **Photo editor** — Per-photo captions, drag or arrow reordering, individual removal, and the source filename on each row
+- **Draft autosave** — Details, photos, captions and order survive a reload in the same browser
+- **Arabic and English** — A one-tap language switch with full RTL layout and Arabic type in the 3D museum text
 - **Final message** — A closing alcove with a lit letter panel reveals the surprise message
 - **Desktop and touch controls** — Keyboard + mouse, or virtual joystick + touch look + View button
 - **Background music** — Sequential multi-track playlist with play/pause and mute (persisted); tracks load on demand
@@ -140,6 +141,7 @@ domain notes and post-deploy checks, is in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 | Inspect photo / read message | `E` or click the frame | Tap the frame or the **View** button |
 | Close an overlay | `Esc`, ✕ or the backdrop | ✕ or the backdrop |
 | Leave the museum | **Leave museum** (top right) | **Leave museum** (top right) |
+| Change language | **العربية / English** (menu and HUD) | **العربية / English** (menu and HUD) |
 
 `Esc` releases the captured mouse; it does not end the tour. Use **Leave museum**
 to exit. A small card explains these controls on the first visit; reopen it any

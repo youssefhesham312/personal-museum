@@ -1,4 +1,5 @@
 import { apiEndpoint, getBackendConfig } from './config.js';
+import { getLanguage, t } from '../i18n.js';
 
 export class MuseumApiError extends Error {
   constructor(code, message, options = {}) {
@@ -175,6 +176,32 @@ export function checkMuseumApiHealth(options = {}) {
 
 /** Human-readable text for UI surfaces. Never includes server internals. */
 export function friendlyMuseumError(error) {
+  if (error instanceof MuseumApiError && getLanguage() === 'ar') {
+    switch (error.code) {
+      case 'not_found':
+        return t('errors.notFound');
+      case 'expired':
+        return t('errors.expired');
+      case 'incomplete':
+        return t('errors.incomplete');
+      case 'rate_limited':
+        return t('errors.rateLimited');
+      case 'forbidden':
+        return t('errors.forbidden');
+      case 'cancelled':
+        return t('errors.cancelled');
+      case 'invalid':
+        return t('errors.checkDetails');
+      case 'network':
+      case 'unavailable':
+        return t('errors.unavailable');
+      case 'upload_failed':
+        return t('errors.uploadFailed');
+      default:
+        return t('errors.genericCreate');
+    }
+  }
+
   if (error instanceof MuseumApiError) {
     switch (error.code) {
       case 'not_found':

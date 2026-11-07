@@ -3,6 +3,7 @@ import { createRoom } from './room.js';
 import { createFoyerLight } from './lighting.js';
 import { createTextPlane } from './text.js';
 import { FOYER_WIDTH, FOYER_DEPTH, FOYER_HEIGHT } from './layout.js';
+import { t } from '../i18n.js';
 
 const INK = '#332a26';
 const INK_MUTED = '#7a6d64';
@@ -136,7 +137,7 @@ export function createFoyer(descriptor, config = {}) {
     doorways: descriptor.doorways,
   });
 
-  const title = config.title || 'Personal Museum';
+  const title = config.title || t('foyer.defaultTitle');
   const recipient = config.recipient || '';
   const dedication = config.dedication || '';
   const photoCount = Array.isArray(config.photos) ? config.photos.length : 0;
@@ -156,7 +157,7 @@ export function createFoyer(descriptor, config = {}) {
   group.add(titlePlate);
 
   if (recipient) {
-    const recipientPlate = createTextPlane(`for ${recipient}`, {
+    const recipientPlate = createTextPlane(t('foyer.forRecipient', { recipient }), {
       fontSize: 52,
       width: 1024,
       height: 128,
@@ -185,7 +186,9 @@ export function createFoyer(descriptor, config = {}) {
   }
 
   if (photoCount > 0) {
-    const countLabel = photoCount === 1 ? 'one photograph' : `${photoCount} photographs`;
+    const countLabel = photoCount === 1
+      ? t('foyer.onePhoto')
+      : t('foyer.photoCount', { count: photoCount });
     const countPlate = createTextPlane(countLabel, {
       fontSize: 34,
       width: 1024,

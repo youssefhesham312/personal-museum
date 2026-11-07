@@ -1,5 +1,6 @@
 import { getAllPhotos } from './db.js';
 import { normalizeMuseumConfig } from '../core/museumConfig.js';
+import { t } from '../i18n.js';
 
 /**
  * Local preview source.
@@ -10,14 +11,14 @@ import { normalizeMuseumConfig } from '../core/museumConfig.js';
  * Shared museums bypass this module entirely: the share route loads a config
  * from the museum API and passes it to the same builder.
  */
-const SAMPLE_COPY = {
-  title: 'The Personal Museum',
-  recipient: '',
-  dedication:
-    'A small collection of moments, kept for you.\nWalk slowly — each room holds something worth remembering.',
-  finalMessage:
-    'Thank you for walking through these memories.\n\nSome places exist only for two people. This one is yours.',
-};
+function sampleCopy() {
+  return {
+    title: t('sample.title'),
+    recipient: '',
+    dedication: t('sample.dedication'),
+    finalMessage: t('sample.finalMessage'),
+  };
+}
 
 export async function loadMuseumConfigFromStorage(details = {}) {
   const photos = await getAllPhotos();
@@ -32,18 +33,19 @@ export async function loadMuseumConfigFromStorage(details = {}) {
       width: photo.width,
       height: photo.height,
       caption: photo.caption || '',
-      date: photo.date || '',
+      date: '',
     };
   });
 
   const source = details && typeof details === 'object' ? details : {};
+  const copy = sampleCopy();
 
   return {
     config: normalizeMuseumConfig({
-      title: source.title || SAMPLE_COPY.title,
-      recipient: source.recipient ?? SAMPLE_COPY.recipient,
-      dedication: source.dedication ?? SAMPLE_COPY.dedication,
-      finalMessage: source.finalMessage ?? SAMPLE_COPY.finalMessage,
+      title: source.title || copy.title,
+      recipient: source.recipient ?? copy.recipient,
+      dedication: source.dedication ?? copy.dedication,
+      finalMessage: source.finalMessage ?? copy.finalMessage,
       photos: mapped,
     }),
     objectUrls,

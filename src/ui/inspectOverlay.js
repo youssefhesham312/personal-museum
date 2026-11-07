@@ -7,6 +7,8 @@
  *
  * The overlay is DOM (readable at any size), while the museum itself stays 3D.
  */
+import { t } from '../i18n.js';
+
 export function createInspectOverlay({ onClose } = {}) {
   const root = document.createElement('div');
   root.className = 'inspect-overlay';
@@ -14,7 +16,7 @@ export function createInspectOverlay({ onClose } = {}) {
   root.innerHTML = `
     <div class="inspect-backdrop" data-close></div>
     <div class="inspect-panel" role="dialog" aria-modal="true" aria-labelledby="inspect-title">
-      <button class="inspect-close" type="button" data-close aria-label="Close">✕</button>
+      <button class="inspect-close" type="button" data-close aria-label="${t('inspect.close')}">✕</button>
       <div class="inspect-media" data-media hidden>
         <img data-image alt="" />
       </div>
@@ -87,7 +89,9 @@ export function createInspectOverlay({ onClose } = {}) {
     openPhoto(photo, meta = {}) {
       panel.classList.remove('is-letter');
       media.hidden = false;
-      image.alt = photo.caption ? `Photograph: ${photo.caption}` : 'Photograph';
+      image.alt = photo.caption
+        ? t('inspect.photoAlt', { caption: photo.caption })
+        : t('inspect.photograph');
       image.src = photo.url;
 
       const position = Number.isInteger(meta.index) && Number.isInteger(meta.total)
@@ -96,7 +100,7 @@ export function createInspectOverlay({ onClose } = {}) {
       kicker.textContent = position;
       kicker.hidden = !position;
 
-      titleEl.textContent = photo.caption || 'A memory';
+      titleEl.textContent = photo.caption || t('inspect.memory');
       textEl.textContent = '';
       textEl.hidden = true;
 
@@ -118,7 +122,9 @@ export function createInspectOverlay({ onClose } = {}) {
       kicker.textContent = title;
       kicker.hidden = !title;
 
-      titleEl.textContent = recipient ? `For ${recipient}` : 'For you';
+      titleEl.textContent = recipient
+        ? t('inspect.forRecipient', { recipient })
+        : t('inspect.forYou');
       textEl.textContent = message;
       textEl.hidden = false;
       metaEl.hidden = true;

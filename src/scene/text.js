@@ -8,7 +8,8 @@ import * as THREE from 'three';
  * them along with the room.
  */
 
-const DEFAULT_FONT = "'Georgia', 'Times New Roman', serif";
+const DEFAULT_FONT =
+  "'Georgia', 'Times New Roman', 'Segoe UI', Tahoma, 'Noto Naskh Arabic', 'Traditional Arabic', serif";
 
 function splitLines(ctx, text, maxWidth) {
   const paragraphs = String(text ?? '').split('\n');

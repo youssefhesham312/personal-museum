@@ -19,6 +19,15 @@ import { loadMuseumConfigFromStorage, revokeObjectUrls } from './storage/museumS
 import { createSampleMuseum } from './demo/sampleMuseum.js';
 import { fetchSharedMuseum } from './backend/api.js';
 import { isSharePath, isValidShareId, parseSharePath } from './backend/shareLink.js';
+import {
+  applyStaticTranslations,
+  getLanguage,
+  initLanguage,
+  t,
+  toggleLanguage,
+} from './i18n.js';
+
+initLanguage();
 
 const TARGET_CHECK_INTERVAL = 0.12; // seconds
 
@@ -87,15 +96,15 @@ let buildController = null;
 // --- Boot -------------------------------------------------------------------
 
 async function init() {
+  applyStaticTranslations();
+
   // Recipients never need local storage. Only the creator's local preview does.
   if (!SHARE_ROUTE) {
     try {
       await initDB();
     } catch (error) {
       console.error('IndexedDB is unavailable', error);
-      showFatalError(
-        'This browser blocked local storage, so photos cannot be kept. Try a private window in another browser, or allow site data for this page.'
-      );
+      showFatalError(t('loading.fatalStorage'));
       return;
     }
   }
@@ -106,6 +115,7 @@ async function init() {
     onInteract: handleInteract,
     onTogglePlay: () => audio.toggle(),
     onToggleMute: () => audio.toggleMute(),
+    onToggleLanguage: () => toggleLanguage({ reload: true }),
   });
   hud.setTouchMode(IS_TOUCH);
 
@@ -130,7 +140,7 @@ async function init() {
       // Only mention it when the visitor actually had the mouse captured
       // (Esc), not when the browser simply refused the initial request.
       if (hadPointerLock && tour.isExploring()) {
-        hud.setHint('Mouse released. Click the museum to look around again.');
+        hud.setHint(t('hud.mouseReleased'));
       }
       hadPointerLock = false;
     },
@@ -368,8 +378,8 @@ async function openSharedMuseum() {
 
   shareOpening = true;
   hideOverlay();
-  showLoading('Opening the Museum');
-  setLoading({ status: 'Finding your museum…' });
+  showLoading(t('loading.opening'));
+  setLoading({ status: t('loading.finding') });
 
   try {
     const response = await fetchSharedMuseum(SHARE_ID);
@@ -407,49 +417,47 @@ function showMuseumUnavailable(kind) {
 
   const copy = {
     expired: {
-      title: 'This museum has closed',
-      message:
-        'Museums stay open for seven days after they are created. This one has reached the end of its run.',
+      title: t('unavailable.expiredTitle'),
+      message: t('unavailable.expiredMessage'),
     },
     not_found: {
-      title: 'This museum could not be found',
-      message:
-        'The link may be mistyped, or the museum may have been removed. Ask the sender for a fresh link.',
+      title: t('unavailable.notFoundTitle'),
+      message: t('unavailable.notFoundMessage'),
     },
     invalid: {
-      title: 'This link doesn’t look right',
-      message: 'The address is missing a valid museum link. Check that you copied the whole link.',
+      title: t('unavailable.invalidTitle'),
+      message: t('unavailable.invalidMessage'),
     },
     network: {
-      title: 'The museum could not be opened',
-      message: 'The museum service could not be reached. Check your connection and try again.',
+      title: t('unavailable.networkTitle'),
+      message: t('unavailable.networkMessage'),
     },
   }[kind] || {
-    title: 'The museum could not be opened',
-    message: 'Something went wrong while opening this museum. Please try again.',
+    title: t('unavailable.genericTitle'),
+    message: t('unavailable.genericMessage'),
   };
 
   const actions = kind === 'network'
     ? [
-        { label: 'Try again', onClick: openSharedMuseum },
-        { label: 'Create your own museum', href: '/' },
+        { label: t('unavailable.tryAgain'), onClick: openSharedMuseum },
+        { label: t('unavailable.createOwn'), href: '/' },
       ]
-    : [{ label: 'Create your own museum', href: '/' }];
+    : [{ label: t('unavailable.createOwn'), href: '/' }];
 
   showShareMessage({ title: copy.title, message: copy.message, actions });
 }
 
 function showShareExitPanel() {
   const title = sharedConfig?.title
-    ? `You have left “${sharedConfig.title}”`
-    : 'You have left the museum';
+    ? t('unavailable.leftTitle', { title: sharedConfig.title })
+    : t('unavailable.leftGeneric');
 
   showShareMessage({
     title,
-    message: 'The museum is still open. You can step back inside whenever you like.',
+    message: t('unavailable.leftMessage'),
     actions: [
-      { label: 'Step back inside', onClick: openSharedMuseum },
-      { label: 'Create your own museum', href: '/' },
+      { label: t('unavailable.stepBack'), onClick: openSharedMuseum },
+      { label: t('unavailable.createOwn'), href: '/' },
     ],
   });
 }
@@ -467,7 +475,7 @@ function showShareMessage({ title, message, actions = [] }) {
   const overlay = document.getElementById('overlay');
   overlay.innerHTML = `
     <div class="menu-panel museum-message">
-      <p class="museum-message-kicker">Personal Museum</p>
+      <p class="museum-message-kicker">${t('unavailable.kicker')}</p>
       <h1></h1>
       <p class="museum-message-text"></p>
       <div class="museum-message-actions"></div>
@@ -478,7 +486,15 @@ function showShareMessage({ title, message, actions = [] }) {
   overlay.querySelector('.museum-message-text').textContent = message;
 
   const actionsEl = overlay.querySelector('.museum-message-actions');
-  for (const action of actions) {
+  const allActions = [
+    ...actions,
+    {
+      label: getLanguage() === 'ar' ? t('language.english') : t('language.arabic'),
+      onClick: () => toggleLanguage({ reload: true }),
+    },
+  ];
+
+  for (const action of allActions) {
     let element;
 
     if (action.href) {
@@ -516,8 +532,8 @@ async function startTour(options = {}) {
   buildController = controller;
 
   hideOverlay();
-  showLoading(SHARE_ROUTE ? 'Opening the Museum' : 'Preparing Your Exhibition');
-  setLoading({ status: SHARE_ROUTE ? 'Collecting the photographs…' : 'Collecting your photographs…' });
+  showLoading(SHARE_ROUTE ? t('loading.opening') : t('loading.preparing'));
+  setLoading({ status: SHARE_ROUTE ? t('loading.collecting') : t('loading.collectingYour') });
 
   // Called from a user gesture in the normal flow: allowed to start audio.
   audio?.play();
@@ -540,8 +556,8 @@ async function startTour(options = {}) {
         setLoading({
           status:
             loaded >= total
-              ? 'Hanging the last frames…'
-              : `Preparing photograph ${Math.max(loaded + 1, 1)} of ${total}…`,
+              ? t('loading.hanging')
+              : t('loading.photo', { index: Math.max(loaded + 1, 1), total }),
         });
       },
     });
@@ -576,7 +592,7 @@ async function startTour(options = {}) {
     hud.setAudioState(audio.getState());
 
     if (SHARE_ROUTE && museumConfig?.title) {
-      document.title = `${museumConfig.title} — Personal Museum`;
+      document.title = `${museumConfig.title} — ${t('app.title')}`;
     }
 
     // Progressive enhancements: never required for a usable museum.
@@ -710,8 +726,9 @@ function updateTarget() {
     return;
   }
 
-  const label = currentTarget.interaction.type === 'finale' ? 'Read the message' : 'View photograph';
-  const action = currentTarget.interaction.type === 'finale' ? 'Read' : 'View';
+  const isFinale = currentTarget.interaction.type === 'finale';
+  const label = isFinale ? t('hud.readMessage') : t('hud.viewPhoto');
+  const action = isFinale ? t('hud.read') : t('hud.view');
   hud.setTargetAvailable(true, label, action);
 }
 
@@ -719,7 +736,7 @@ function updateTarget() {
 
 const loadingEl = document.getElementById('loading');
 
-function showLoading(title = 'Preparing Your Exhibition') {
+function showLoading(title = t('loading.preparing')) {
   loadingEl.classList.add('visible');
   loadingEl.classList.remove('has-error');
   loadingEl.querySelector('.loading-title').textContent = title;
@@ -740,13 +757,13 @@ function showLoadingError(error) {
   const message =
     error && typeof error.message === 'string' && error.message.length > 0
       ? error.message
-      : 'Something went wrong while preparing the museum.';
+      : t('loading.errorFallback');
 
   loadingEl.classList.add('visible', 'has-error');
-  loadingEl.querySelector('.loading-title').textContent = 'The museum could not open';
+  loadingEl.querySelector('.loading-title').textContent = t('loading.errorTitle');
   const errorEl = loadingEl.querySelector('.loading-error');
   if (errorEl) {
-    errorEl.textContent = `${message} Check your connection and try again.`;
+    errorEl.textContent = `${message}${t('loading.errorSuffix')}`;
   }
   tour.leave();
   player.setEnabled(false);
@@ -807,8 +824,8 @@ function showFatalError(message) {
   overlay.classList.remove('hidden');
   overlay.innerHTML = `
     <div class="menu-panel">
-      <h1>Personal Museum</h1>
-      <p class="subtitle">Something is blocking the museum</p>
+      <h1>${t('app.title')}</h1>
+      <p class="subtitle">${t('loading.fatalSubtitle')}</p>
       <p class="menu-note" style="margin-top:0">${escapeHtml(message)}</p>
     </div>
   `;
@@ -856,7 +873,7 @@ document.addEventListener('visibilitychange', () => {
 // still have the on-screen exit button.
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && tour.isExploring()) {
-    hud?.setHint('Fullscreen ended. The museum is still open — use Leave museum to exit.');
+    hud?.setHint(t('hud.fullscreenEnded'));
   }
 });
 

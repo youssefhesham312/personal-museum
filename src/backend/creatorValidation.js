@@ -3,6 +3,7 @@ import {
   cleanBlock,
   cleanLine,
 } from '../../supabase/functions/_shared/validation.js';
+import { t } from '../i18n.js';
 
 /**
  * Client-side mirror of the required creator fields. The server validates
@@ -17,15 +18,15 @@ export function validateCreatorDetails(details = {}, photoCount = 0) {
   const dedication = cleanBlock(details.dedication, MUSEUM_LIMITS.maxDedicationLength);
   const finalMessage = cleanBlock(details.finalMessage, MUSEUM_LIMITS.maxFinalMessageLength);
 
-  if (!title) fields.title = 'Add a museum title.';
-  if (!recipient) fields.recipient = "Add the recipient's name.";
-  if (!finalMessage) fields.finalMessage = 'Add a closing message.';
+  if (!title) fields.title = t('validation.title');
+  if (!recipient) fields.recipient = t('validation.recipient');
+  if (!finalMessage) fields.finalMessage = t('validation.finalMessage');
 
   const count = Number(photoCount) || 0;
   if (count < MUSEUM_LIMITS.minPhotos) {
-    errors.push(`Add at least ${MUSEUM_LIMITS.minPhotos} photographs.`);
+    errors.push(t('validation.minPhotos', { count: MUSEUM_LIMITS.minPhotos }));
   } else if (count > MUSEUM_LIMITS.maxPhotos) {
-    errors.push(`A museum can hold at most ${MUSEUM_LIMITS.maxPhotos} photographs.`);
+    errors.push(t('validation.maxPhotos', { count: MUSEUM_LIMITS.maxPhotos }));
   }
 
   const ok = errors.length === 0 && Object.keys(fields).length === 0;

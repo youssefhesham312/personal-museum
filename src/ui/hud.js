@@ -1,3 +1,5 @@
+import { getLanguage, t } from '../i18n.js';
+
 const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z"/></svg>';
 const ICON_SOUND = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l4-3.3v12.6L7 15H4z"/><path d="M15.2 8.4a5 5 0 010 7.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M17.8 5.8a8.4 8.4 0 010 12.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -6,31 +8,30 @@ const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l
 const HINT_DURATION = 8000;
 const CONTROLS_SEEN_KEY = 'museum-controls-seen';
 
-const DESKTOP_HINT =
-  'WASD to walk · drag or click to look · click or E to inspect · Esc releases the mouse';
-const TOUCH_HINT = 'Left side to walk · drag to look · tap a frame or View to inspect';
-
 const MOVEMENT_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
 ]);
 
-const CONTROLS = {
-  desktop: [
-    ['Walk', 'W A S D or the arrow keys'],
-    ['Look', 'move the mouse — click once to capture it, or drag'],
-    ['Inspect', 'click a frame or press E'],
-    ['Close', 'Esc, ✕, or click outside the photo'],
-    ['Leave', 'Leave museum, top right'],
-  ],
-  touch: [
-    ['Walk', 'joystick on the left half'],
-    ['Look', 'drag anywhere on the right half'],
-    ['Inspect', 'tap a frame or the View button'],
-    ['Close', '✕ or tap outside the photo'],
-    ['Leave', 'Leave museum, top right'],
-  ],
-};
+function controlsFor(touch) {
+  if (touch) {
+    return [
+      [t('hud.walk'), t('hud.walkTouch')],
+      [t('hud.look'), t('hud.lookTouch')],
+      [t('hud.inspect'), t('hud.inspectTouch')],
+      [t('hud.close'), t('hud.closeTouch')],
+      [t('hud.leave'), t('hud.leaveValue')],
+    ];
+  }
+
+  return [
+    [t('hud.walk'), t('hud.walkDesktop')],
+    [t('hud.look'), t('hud.lookDesktop')],
+    [t('hud.inspect'), t('hud.inspectDesktop')],
+    [t('hud.close'), t('hud.closeDesktop')],
+    [t('hud.leave'), t('hud.leaveValue')],
+  ];
+}
 
 function readControlsSeen() {
   try {
@@ -53,33 +54,34 @@ function markControlsSeen() {
  * In-tour HUD: exit control, audio controls, reticle, target label, hint,
  * first-entry controls card, joystick and the touch interact button.
  */
-export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {}) {
+export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute, onToggleLanguage } = {}) {
   const root = document.createElement('div');
   root.className = 'hud is-hidden';
   root.innerHTML = `
     <div class="touch-layer" data-hud-layer></div>
     <div class="hud-bar hud-bar--left">
-      <button class="hud-icon" type="button" data-touch-ui data-action="play" aria-label="Pause music" aria-pressed="true">${ICON_PAUSE}</button>
-      <button class="hud-icon" type="button" data-touch-ui data-action="mute" aria-label="Mute music" aria-pressed="false">${ICON_SOUND}</button>
-      <button class="hud-icon hud-help" type="button" data-touch-ui data-action="help" aria-label="Show controls" aria-expanded="false">?</button>
+      <button class="hud-icon" type="button" data-touch-ui data-action="play" aria-label="${t('hud.pauseMusic')}" aria-pressed="true">${ICON_PAUSE}</button>
+      <button class="hud-icon" type="button" data-touch-ui data-action="mute" aria-label="${t('hud.muteMusic')}" aria-pressed="false">${ICON_SOUND}</button>
+      <button class="hud-icon hud-help" type="button" data-touch-ui data-action="help" aria-label="${t('hud.showControls')}" aria-expanded="false">?</button>
+      <button class="hud-icon hud-lang" type="button" data-touch-ui data-action="language" aria-label="${getLanguage() === 'ar' ? t('language.switchToEnglish') : t('language.switchToArabic')}">${getLanguage() === 'ar' ? 'EN' : 'ع'}</button>
     </div>
     <div class="hud-bar hud-bar--right">
-      <button class="hud-btn hud-btn--exit" type="button" data-touch-ui data-action="exit">Leave museum</button>
+      <button class="hud-btn hud-btn--exit" type="button" data-touch-ui data-action="exit">${t('hud.leaveMuseum')}</button>
     </div>
     <div class="reticle" data-reticle aria-hidden="true"></div>
     <div class="target-label" data-target-label role="status" aria-live="polite"></div>
     <div class="hud-hint" role="status" data-hint></div>
-    <div class="controls-card" data-controls-card role="dialog" aria-label="How to explore" aria-hidden="true">
-      <button class="controls-close" type="button" data-controls-dismiss aria-label="Close controls">×</button>
-      <p class="controls-kicker">How to explore</p>
+    <div class="controls-card" data-controls-card role="dialog" aria-label="${t('hud.controlsKicker')}" aria-hidden="true">
+      <button class="controls-close" type="button" data-controls-dismiss aria-label="${t('hud.closeControls')}">×</button>
+      <p class="controls-kicker">${t('hud.controlsKicker')}</p>
       <dl class="controls-list" data-controls-list></dl>
-      <button class="controls-start" type="button" data-controls-dismiss>Begin exploring</button>
+      <button class="controls-start" type="button" data-controls-dismiss>${t('hud.beginExploring')}</button>
     </div>
     <div class="joystick" data-joystick aria-hidden="true">
       <div class="joystick-knob" data-joystick-knob></div>
     </div>
-    <button class="interact-btn" type="button" data-touch-ui data-interact aria-label="Inspect">
-      <span>View</span>
+    <button class="interact-btn" type="button" data-touch-ui data-interact aria-label="${t('hud.inspect')}">
+      <span>${t('hud.view')}</span>
     </button>
   `;
 
@@ -90,6 +92,7 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {})
   const playButton = root.querySelector('[data-action="play"]');
   const muteButton = root.querySelector('[data-action="mute"]');
   const helpButton = root.querySelector('[data-action="help"]');
+  const languageButton = root.querySelector('[data-action="language"]');
   const reticle = root.querySelector('[data-reticle]');
   const targetLabel = root.querySelector('[data-target-label]');
   const hint = root.querySelector('[data-hint]');
@@ -120,11 +123,11 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {})
   }
 
   function defaultHint() {
-    return touchMode ? TOUCH_HINT : DESKTOP_HINT;
+    return touchMode ? t('hud.touchHint') : t('hud.desktopHint');
   }
 
   function renderControls() {
-    const rows = touchMode ? CONTROLS.touch : CONTROLS.desktop;
+    const rows = controlsFor(touchMode);
     controlsList.innerHTML = rows
       .map(([term, value]) => `
         <div class="controls-row">
@@ -158,7 +161,7 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {})
     if (showHint) setHint(defaultHint());
   }
 
-  function setTargetAvailable(available, label = 'Inspect', action = 'View') {
+  function setTargetAvailable(available, label = t('hud.inspect'), action = t('hud.view')) {
     targetAvailable = Boolean(available);
     root.classList.toggle('has-target', targetAvailable);
     interactButton.classList.toggle('is-active', targetAvailable);
@@ -169,10 +172,10 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {})
 
   function updateAudio({ playing, muted }) {
     playButton.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
-    playButton.setAttribute('aria-label', playing ? 'Pause music' : 'Play music');
+    playButton.setAttribute('aria-label', playing ? t('hud.pauseMusic') : t('hud.playMusic'));
     playButton.setAttribute('aria-pressed', String(Boolean(playing)));
     muteButton.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
-    muteButton.setAttribute('aria-label', muted ? 'Unmute music' : 'Mute music');
+    muteButton.setAttribute('aria-label', muted ? t('hud.unmuteMusic') : t('hud.muteMusic'));
     muteButton.setAttribute('aria-pressed', String(Boolean(muted)));
     root.classList.toggle('is-muted', Boolean(muted));
   }
@@ -209,6 +212,10 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute } = {})
   helpButton.addEventListener('click', (event) => {
     event.preventDefault();
     setControlsVisible(!controlsCard.classList.contains('is-visible'));
+  });
+  languageButton?.addEventListener('click', (event) => {
+    event.preventDefault();
+    onToggleLanguage?.();
   });
   controlsCard.querySelectorAll('[data-controls-dismiss]').forEach((button) => {
     button.addEventListener('click', (event) => {
