@@ -1,5 +1,5 @@
 import { createJoystickState } from './joystick.js';
-import { TOUCH_SENSITIVITY } from './look.js';
+import { TOUCH_SENSITIVITY, isTapGesture } from './look.js';
 
 const MOVE_ZONE_MAX_X = 0.5;   // left half of the screen
 const MOVE_ZONE_MIN_Y = 0.22;  // ignore the very top of the screen
@@ -25,6 +25,10 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
   let lookPointerId = null;
   let lastLookX = 0;
   let lastLookY = 0;
+  let lookStartX = 0;
+  let lookStartY = 0;
+  let lookStartedAt = 0;
+  let lookMoved = 0;
 
   function isMoveZone(clientX, clientY) {
     return (
@@ -62,6 +66,10 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
       }
       lastLookX = event.clientX;
       lastLookY = event.clientY;
+      lookStartX = event.clientX;
+      lookStartY = event.clientY;
+      lookStartedAt = performance.now();
+      lookMoved = 0;
     }
   }
 
@@ -82,11 +90,12 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
       const dy = event.clientY - lastLookY;
       lastLookX = event.clientX;
       lastLookY = event.clientY;
+      lookMoved += Math.hypot(dx, dy);
       player.addLook(dx, dy, TOUCH_SENSITIVITY);
     }
   }
 
-  function releasePointer(event) {
+  function releasePointer(event, allowTap = false) {
     if (event.pointerId === movePointerId) {
       movePointerId = null;
       joystick.end();
@@ -95,6 +104,22 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
     }
     if (event.pointerId === lookPointerId) {
       lookPointerId = null;
+
+      // A short, still touch on the look side is a tap, not a drag: inspect the
+      // frame under the reticle when one is available and the controls card is
+      // not covering the scene.
+      if (
+        allowTap &&
+        !hud.controlsVisible &&
+        isTapGesture({
+          dx: event.clientX - lookStartX,
+          dy: event.clientY - lookStartY,
+          durationMs: performance.now() - lookStartedAt,
+        }) &&
+        lookMoved <= 10
+      ) {
+        onInteract?.();
+      }
     }
   }
 
@@ -110,11 +135,19 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
     if (enabled) event.preventDefault();
   }
 
+  function onPointerUp(event) {
+    releasePointer(event, true);
+  }
+
+  function onPointerCancel(event) {
+    releasePointer(event, false);
+  }
+
   layer.addEventListener('pointerdown', onPointerDown);
   layer.addEventListener('pointermove', onPointerMove);
-  layer.addEventListener('pointerup', releasePointer);
-  layer.addEventListener('pointercancel', releasePointer);
-  layer.addEventListener('pointerleave', releasePointer);
+  layer.addEventListener('pointerup', onPointerUp);
+  layer.addEventListener('pointercancel', onPointerCancel);
+  layer.addEventListener('pointerleave', onPointerCancel);
   layer.addEventListener('contextmenu', onContextMenu);
   window.addEventListener('blur', reset);
   window.addEventListener('orientationchange', reset);
@@ -128,9 +161,9 @@ export function createTouchInput({ layer, player, hud, onInteract }) {
     dispose() {
       layer.removeEventListener('pointerdown', onPointerDown);
       layer.removeEventListener('pointermove', onPointerMove);
-      layer.removeEventListener('pointerup', releasePointer);
-      layer.removeEventListener('pointercancel', releasePointer);
-      layer.removeEventListener('pointerleave', releasePointer);
+      layer.removeEventListener('pointerup', onPointerUp);
+      layer.removeEventListener('pointercancel', onPointerCancel);
+      layer.removeEventListener('pointerleave', onPointerCancel);
       layer.removeEventListener('contextmenu', onContextMenu);
       window.removeEventListener('blur', reset);
       window.removeEventListener('orientationchange', reset);

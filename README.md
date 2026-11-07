@@ -17,7 +17,9 @@ seven days.
 - **Feature walls** — Walls with single large landscape paintings alongside standard gallery arrangements
 - **3D photo frames** — Aspect-ratio-preserving frames with a slim walnut molding, warm mat, brass liner and a printed caption card
 - **Warm gallery lighting** — A small shared rig (two ceiling lights per gallery, none per photo) keeps rooms readable without a light per frame
-- **Photo inspection** — Aim at a frame (or use the View button) to read the full photo, caption and date
+- **Photo inspection** — Aim at a frame (or tap it, or use the View button) to read the full photo, caption and date
+- **Photo editor** — Per-photo captions and dates, drag or arrow reordering, individual removal
+- **Draft autosave** — Details, photos, captions, dates and order survive a reload in the same browser
 - **Final message** — A closing alcove with a lit letter panel reveals the surprise message
 - **Desktop and touch controls** — Keyboard + mouse, or virtual joystick + touch look + View button
 - **Background music** — Sequential multi-track playlist with play/pause and mute (persisted); tracks load on demand
@@ -135,7 +137,7 @@ domain notes and post-deploy checks, is in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 | --- | --- | --- |
 | Walk | `W` `A` `S` `D` / arrow keys | Virtual joystick (left half of the screen) |
 | Look | Mouse (click to capture, or drag) | Drag anywhere on the right half |
-| Inspect photo / read message | `E` or click the frame | **View** button (bottom right) |
+| Inspect photo / read message | `E` or click the frame | Tap the frame or the **View** button |
 | Close an overlay | `Esc`, ✕ or the backdrop | ✕ or the backdrop |
 | Leave the museum | **Leave museum** (top right) | **Leave museum** (top right) |
 

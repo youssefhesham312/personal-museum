@@ -739,6 +739,183 @@ body.is-touch .hud .touch-layer {
   display: none;
 }
 
+/* --- Photo editor --------------------------------------------------------- */
+
+.photo-gallery-wrap {
+  margin: 0 0 14px;
+  padding: 10px;
+  border: 1px solid rgba(180, 160, 130, 0.22);
+  border-radius: 4px;
+  background: rgba(10, 8, 6, 0.22);
+}
+
+.photo-gallery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-family: var(--sans);
+  font-size: 9.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.photo-gallery-head span:last-child {
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  opacity: 0.7;
+  text-align: right;
+}
+
+.photo-gallery {
+  display: grid;
+  gap: 8px;
+}
+
+.photo-card {
+  display: grid;
+  grid-template-columns: 18px 54px minmax(0, 1fr) 26px;
+  gap: 8px;
+  align-items: stretch;
+  padding: 7px;
+  border: 1px solid rgba(180, 160, 130, 0.2);
+  border-radius: 3px;
+  background: rgba(10, 8, 6, 0.3);
+  transition: opacity 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.photo-card.is-dragging {
+  opacity: 0.45;
+}
+
+.photo-card.is-drop-before {
+  box-shadow: 0 -2px 0 0 #d8c7b2;
+}
+
+.photo-card.is-drop-after {
+  box-shadow: 0 2px 0 0 #d8c7b2;
+}
+
+.photo-drag {
+  width: 18px;
+  margin: 0;
+  padding: 0;
+  align-self: stretch;
+  color: #8a7d70;
+  background: transparent;
+  border: 0;
+  cursor: grab;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.photo-drag:active {
+  cursor: grabbing;
+}
+
+.photo-thumb {
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(180, 160, 130, 0.12);
+}
+
+.photo-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-fields {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.photo-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.photo-field > span {
+  font-family: var(--sans);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.photo-field em {
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.6;
+}
+
+.photo-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  font-family: var(--serif);
+  font-size: 12px;
+  line-height: 1.35;
+  color: #f0e6d6;
+  background: rgba(10, 8, 6, 0.45);
+  border: 1px solid rgba(180, 160, 130, 0.24);
+  border-radius: 2px;
+  outline: none;
+}
+
+.photo-field input:focus {
+  border-color: rgba(210, 188, 155, 0.7);
+  box-shadow: 0 0 0 2px rgba(210, 188, 155, 0.1);
+}
+
+.photo-field input::placeholder {
+  color: #6f645a;
+}
+
+.photo-actions {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.photo-actions button {
+  width: 26px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-cream);
+  background: rgba(18, 16, 13, 0.6);
+  border: 1px solid rgba(180, 160, 130, 0.24);
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.photo-actions button:hover {
+  background: rgba(96, 62, 52, 0.6);
+  border-color: rgba(200, 180, 150, 0.5);
+}
+
+.draft-status {
+  margin: -2px 0 12px;
+  font-family: var(--sans);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #8a7d70;
+}
+
 .menu-panel .share-btn {
   background: rgba(96, 62, 52, 0.5);
   border-color: rgba(200, 180, 150, 0.52);
@@ -933,6 +1110,34 @@ body.is-touch .hud .touch-layer {
   .menu-panel.creator-panel {
     width: min(94vw, 480px);
     padding: 28px 20px;
+  }
+
+  .photo-gallery-head span:last-child {
+    display: none;
+  }
+
+  .photo-card {
+    grid-template-columns: 16px 46px minmax(0, 1fr) 24px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .photo-thumb {
+    width: 46px;
+    height: 46px;
+  }
+
+  .photo-field > span {
+    font-size: 8px;
+  }
+
+  .photo-field input {
+    font-size: 11.5px;
+    padding: 5px 6px;
+  }
+
+  .photo-actions button {
+    width: 24px;
   }
 
   .inspect-media img {

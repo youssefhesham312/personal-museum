@@ -31,9 +31,16 @@ const IS_TOUCH = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 // --- Renderer ---------------------------------------------------------------
 
 const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// Touch devices get a lower pixel budget and no MSAA: the scene is already
+// texture-bound on phones, and this keeps the frame rate stable.
+const MAX_PIXEL_RATIO = IS_TOUCH ? 1.5 : 2;
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: !IS_TOUCH,
+  powerPreference: 'high-performance',
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 
@@ -66,6 +73,8 @@ let starting = false;
 let exiting = false;
 let pendingConfig = null;
 let lastFrameTime = 0;
+let renderDirty = true;
+let renderCount = 0;
 let lastStartDetails = null;
 let sharedConfig = null;
 let shareOpening = false;
@@ -173,6 +182,9 @@ async function init() {
       },
       get buildMs() {
         return lastBuildMs;
+      },
+      get renderCount() {
+        return renderCount;
       },
       get controlsVisible() {
         return hud?.controlsVisible ?? false;
@@ -549,6 +561,7 @@ async function startTour(options = {}) {
     museum = built;
     scene.add(built.group);
     scene.updateMatrixWorld(true);
+    renderDirty = true;
 
     collisionCheck = createCollisionChecker(built.collisionMeshes);
 
@@ -633,6 +646,7 @@ function disposeMuseum() {
   currentTarget = null;
   revokeObjectUrls(objectUrls);
   objectUrls = [];
+  renderDirty = true;
 }
 
 // --- Interaction ------------------------------------------------------------
@@ -824,11 +838,19 @@ function handleResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+  renderDirty = true;
   touchInput?.handleResize();
 }
 
 window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', handleResize);
+
+// Do not render while the tab is hidden, and refresh once when it returns.
+document.addEventListener('visibilitychange', () => {
+  lastFrameTime = 0;
+  if (!document.hidden) renderDirty = true;
+});
 
 // Leaving fullscreen (Esc) must not eject the visitor from the museum; they
 // still have the on-screen exit button.
@@ -843,6 +865,11 @@ document.addEventListener('fullscreenchange', () => {
 function animate(now = 0) {
   requestAnimationFrame(animate);
 
+  if (document.hidden) {
+    lastFrameTime = now;
+    return;
+  }
+
   const delta = lastFrameTime ? Math.min((now - lastFrameTime) / 1000, 0.1) : 0;
   lastFrameTime = now;
 
@@ -854,9 +881,20 @@ function animate(now = 0) {
       targetTimer = 0;
       updateTarget();
     }
+
+    renderer.render(scene, camera);
+    renderCount += 1;
+    renderDirty = false;
+    return;
   }
 
-  renderer.render(scene, camera);
+  // The menu, loading screen and photo dialog are static: repaint only when
+  // something changed (resize, a newly built museum, returning to the menu).
+  if (renderDirty) {
+    renderer.render(scene, camera);
+    renderCount += 1;
+    renderDirty = false;
+  }
 }
 
 init();

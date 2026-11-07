@@ -8,7 +8,7 @@ const CONTROLS_SEEN_KEY = 'museum-controls-seen';
 
 const DESKTOP_HINT =
   'WASD to walk · drag or click to look · click or E to inspect · Esc releases the mouse';
-const TOUCH_HINT = 'Left side to walk · drag to look · tap View to inspect';
+const TOUCH_HINT = 'Left side to walk · drag to look · tap a frame or View to inspect';
 
 const MOVEMENT_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD',
@@ -26,7 +26,7 @@ const CONTROLS = {
   touch: [
     ['Walk', 'joystick on the left half'],
     ['Look', 'drag anywhere on the right half'],
-    ['Inspect', 'tap View'],
+    ['Inspect', 'tap a frame or the View button'],
     ['Close', '✕ or tap outside the photo'],
     ['Leave', 'Leave museum, top right'],
   ],

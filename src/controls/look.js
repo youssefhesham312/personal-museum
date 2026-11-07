@@ -8,6 +8,20 @@ export const PITCH_LIMIT = Math.PI * 0.47; // ~85 degrees
 export const MOUSE_SENSITIVITY = 0.002;
 export const TOUCH_SENSITIVITY = 0.0045;
 
+// A tap is a look-zone gesture that neither moved nor lasted long enough to be
+// a drag. It is what opens the inspection overlay on touch devices.
+export const TAP_MAX_DISTANCE = 10;
+export const TAP_MAX_DURATION = 350;
+
+/**
+ * @param {{dx?: number, dy?: number, durationMs?: number}} gesture
+ * @returns {boolean} true when the gesture should count as a tap
+ */
+export function isTapGesture({ dx = 0, dy = 0, durationMs = Number.POSITIVE_INFINITY } = {}) {
+  if (!Number.isFinite(durationMs) || durationMs > TAP_MAX_DURATION) return false;
+  return Math.hypot(Number(dx) || 0, Number(dy) || 0) <= TAP_MAX_DISTANCE;
+}
+
 export function clampPitch(pitch) {
   if (!Number.isFinite(pitch)) return 0;
   return Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));

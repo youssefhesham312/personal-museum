@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { applyLookDelta, clampPitch, normalizeYaw, PITCH_LIMIT, MOUSE_SENSITIVITY } from './look.js';
+import {
+  applyLookDelta,
+  clampPitch,
+  normalizeYaw,
+  isTapGesture,
+  PITCH_LIMIT,
+  MOUSE_SENSITIVITY,
+} from './look.js';
 
 describe('look math', () => {
   it('clamps pitch to the vertical limit', () => {
@@ -35,5 +42,15 @@ describe('look math', () => {
     expect(normalizeYaw(Math.PI * 4)).toBeCloseTo(0, 6);
     expect(Math.abs(normalizeYaw(-Math.PI * 3))).toBeCloseTo(Math.PI, 6);
     expect(normalizeYaw(1)).toBeCloseTo(1, 6);
+  });
+
+  it('treats a short still gesture as a tap', () => {
+    expect(isTapGesture({ dx: 2, dy: -3, durationMs: 120 })).toBe(true);
+    expect(isTapGesture({ dx: 0, dy: 0, durationMs: 0 })).toBe(true);
+  });
+
+  it('rejects a drag or a long press', () => {
+    expect(isTapGesture({ dx: 40, dy: 0, durationMs: 100 })).toBe(false);
+    expect(isTapGesture({ dx: 2, dy: 2, durationMs: 600 })).toBe(false);
   });
 });

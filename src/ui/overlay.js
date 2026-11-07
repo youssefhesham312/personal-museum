@@ -1,5 +1,11 @@
 import { handleUpload, buildUploadSummary } from './upload.js';
-import { getPhotoCount, getAllPhotos, clearAllPhotos } from '../storage/db.js';
+import {
+  getAllPhotos,
+  clearAllPhotos,
+  updatePhoto,
+  deletePhoto,
+  reorderPhotos,
+} from '../storage/db.js';
 import { MUSEUM_LIMITS } from '../../supabase/functions/_shared/validation.js';
 import { getBackendConfig } from '../backend/config.js';
 import { createShareableMuseum } from '../backend/shareFlow.js';
@@ -22,6 +28,15 @@ let backendMessage = '';
 let audioApi = null;
 let unsubscribeAudio = null;
 let refreshOverlayState = null;
+
+// Photo editor state: IndexedDB is the source of truth, the DOM is rebuilt only
+// when the set/order changes so typing never loses focus.
+let photoItems = [];
+let photoUrls = [];
+let photoGalleryEl = null;
+let draftStatusEl = null;
+let dragPhotoId = null;
+let photoSaveTimers = new Map();
 
 function loadStoredDetails() {
   try {
@@ -95,7 +110,17 @@ export function initOverlay({ onStart, audio }) {
       <button id="upload-btn" type="button">Add Photos</button>
       <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple />
       <p class="photo-count" id="photo-count"></p>
+
+      <div class="photo-gallery-wrap" id="photo-gallery-wrap" hidden>
+        <div class="photo-gallery-head">
+          <span>Photographs</span>
+          <span>Drag the handle or use the arrows to reorder</span>
+        </div>
+        <div class="photo-gallery" id="photo-gallery"></div>
+      </div>
+
       <p class="upload-status" id="upload-status" role="status" aria-live="polite"></p>
+      <p class="draft-status" id="draft-status" hidden>Draft saved in this browser. Captions, dates and photo order are kept automatically.</p>
 
       <button id="start-btn" type="button" disabled>Preview the Tour</button>
       <button id="share-btn" type="button" class="share-btn" disabled>Create Share Link</button>
@@ -155,6 +180,8 @@ export function initOverlay({ onStart, audio }) {
   const resetBtn = document.getElementById('reset-btn');
   const playBtn = document.getElementById('play-btn');
   const muteBtn = document.getElementById('mute-btn');
+  photoGalleryEl = document.getElementById('photo-gallery');
+  draftStatusEl = document.getElementById('draft-status');
 
   const titleInput = document.getElementById('museum-title');
   const recipientInput = document.getElementById('museum-recipient');
@@ -295,6 +322,7 @@ export function initOverlay({ onStart, audio }) {
     }
 
     resetBtn.style.display = photoCount > 0 ? 'inline-block' : 'none';
+    updateDraftStatus();
     refreshValidation();
   }
 
@@ -319,6 +347,270 @@ export function initOverlay({ onStart, audio }) {
     shareProgress.hidden = true;
   }
 
+  function revokePhotoUrls() {
+    for (const url of photoUrls) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        /* already revoked */
+      }
+    }
+    photoUrls = [];
+  }
+
+  function updateDraftStatus() {
+    if (!draftStatusEl) return;
+    const hasDetails = detailInputs.some((input) => input.value.trim().length > 0);
+    draftStatusEl.hidden = photoItems.length === 0 && !hasDetails;
+  }
+
+  function clearDropClasses() {
+    photoGalleryEl?.querySelectorAll('.photo-card').forEach((card) => {
+      card.classList.remove('is-drop-before', 'is-drop-after');
+    });
+  }
+
+  function renderPhotoEditor() {
+    if (!photoGalleryEl) return;
+
+    revokePhotoUrls();
+    photoGalleryEl.innerHTML = '';
+
+    const wrap = document.getElementById('photo-gallery-wrap');
+    if (wrap) wrap.hidden = photoItems.length === 0;
+    if (photoItems.length === 0) return;
+
+    photoItems.forEach((photo, photoPosition) => {
+      const url = URL.createObjectURL(photo.blob);
+      photoUrls.push(url);
+      const humanPosition = photoPosition + 1;
+
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+      card.dataset.photoId = String(photo.id);
+
+      const captionId = `photo-caption-${photo.id}`;
+      const dateId = `photo-date-${photo.id}`;
+      card.innerHTML = `
+        <button class="photo-drag" type="button" data-drag-handle aria-label="Drag photograph ${humanPosition} to reorder" title="Drag to reorder">⋮⋮</button>
+        <div class="photo-thumb"><img alt="" /></div>
+        <div class="photo-fields">
+          <label class="photo-field" for="${captionId}">
+            <span>Caption <em>optional</em></span>
+            <input id="${captionId}" type="text" data-photo-caption maxlength="${MUSEUM_LIMITS.maxCaptionLength}" placeholder="A few words about this photo" />
+          </label>
+          <label class="photo-field" for="${dateId}">
+            <span>Date <em>optional</em></span>
+            <input id="${dateId}" type="text" data-photo-date maxlength="${MUSEUM_LIMITS.maxDateLength}" placeholder="Summer 2025" />
+          </label>
+        </div>
+        <div class="photo-actions">
+          <button type="button" data-move-up aria-label="Move photograph ${humanPosition} earlier" title="Move earlier">↑</button>
+          <button type="button" data-move-down aria-label="Move photograph ${humanPosition} later" title="Move later">↓</button>
+          <button type="button" data-remove aria-label="Remove photograph ${humanPosition}" title="Remove photo">×</button>
+        </div>
+      `;
+
+      const image = card.querySelector('img');
+      image.src = url;
+      image.alt = photo.caption ? `Photograph: ${photo.caption}` : 'Photograph';
+      card.querySelector('[data-photo-caption]').value = photo.caption || '';
+      card.querySelector('[data-photo-date]').value = photo.date || '';
+      // Only the handle is draggable, so selecting caption text never starts a
+      // drag and the inputs stay ordinary controls.
+      card.querySelector('[data-drag-handle]').draggable = true;
+      photoGalleryEl.appendChild(card);
+    });
+  }
+
+  async function loadPhotoEditor() {
+    try {
+      photoItems = await getAllPhotos();
+    } catch (error) {
+      console.error('[photos] the draft could not be loaded', error);
+      photoItems = [];
+    }
+    photoCount = photoItems.length;
+    renderPhotoEditor();
+    updatePhotoCount();
+  }
+
+  function queuePhotoSave(id) {
+    const pending = photoSaveTimers.get(id);
+    if (pending) clearTimeout(pending);
+
+    const timer = setTimeout(() => {
+      photoSaveTimers.delete(id);
+      const item = photoItems.find((photo) => photo.id === id);
+      if (!item) return;
+      updatePhoto(id, { caption: item.caption, date: item.date }).catch((error) => {
+        console.error('[photos] caption/date could not be saved', error);
+      });
+    }, 250);
+    photoSaveTimers.set(id, timer);
+  }
+
+  function flushPhotoSave(id) {
+    const pending = photoSaveTimers.get(id);
+    if (pending) {
+      clearTimeout(pending);
+      photoSaveTimers.delete(id);
+    }
+    const item = photoItems.find((photo) => photo.id === id);
+    if (!item) return;
+    updatePhoto(id, { caption: item.caption, date: item.date }).catch((error) => {
+      console.error('[photos] caption/date could not be saved', error);
+    });
+  }
+
+  async function persistPhotoOrder() {
+    photoItems.forEach((photo, index) => {
+      photo.position = index;
+    });
+    try {
+      await reorderPhotos(photoItems.map((photo) => photo.id));
+    } catch (error) {
+      console.error('[photos] the new order could not be saved', error);
+    }
+    markShareStale();
+    updatePhotoCount();
+  }
+
+  function movePhoto(draggedId, targetId, after) {
+    const from = photoItems.findIndex((photo) => photo.id === draggedId);
+    if (from < 0 || draggedId === targetId) return;
+
+    const [moving] = photoItems.splice(from, 1);
+    let insertAt = photoItems.findIndex((photo) => photo.id === targetId);
+    if (insertAt < 0) insertAt = photoItems.length;
+    if (after) insertAt += 1;
+    photoItems.splice(insertAt, 0, moving);
+
+    persistPhotoOrder();
+    renderPhotoEditor();
+  }
+
+  function movePhotoBy(id, delta) {
+    const from = photoItems.findIndex((photo) => photo.id === id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= photoItems.length) return;
+
+    [photoItems[from], photoItems[to]] = [photoItems[to], photoItems[from]];
+    persistPhotoOrder();
+    renderPhotoEditor();
+  }
+
+  async function removePhotoItem(id) {
+    const pending = photoSaveTimers.get(id);
+    if (pending) {
+      clearTimeout(pending);
+      photoSaveTimers.delete(id);
+    }
+
+    try {
+      await deletePhoto(id);
+    } catch (error) {
+      console.error('[photos] the photo could not be removed', error);
+      setUploadStatus('The photo could not be removed. Try again.', 'error');
+      return;
+    }
+
+    photoItems = photoItems.filter((photo) => photo.id !== id);
+    photoCount = photoItems.length;
+    renderPhotoEditor();
+    updatePhotoCount();
+    markShareStale();
+    setUploadStatus('Photo removed.', 'ok');
+  }
+
+  photoGalleryEl?.addEventListener('input', (event) => {
+    const input = event.target;
+    const card = input.closest?.('.photo-card');
+    if (!card) return;
+
+    const id = Number(card.dataset.photoId);
+    const item = photoItems.find((photo) => photo.id === id);
+    if (!item) return;
+
+    if (input.matches('[data-photo-caption]')) item.caption = input.value;
+    else if (input.matches('[data-photo-date]')) item.date = input.value;
+    else return;
+
+    markShareStale();
+    updateDraftStatus();
+    queuePhotoSave(id);
+  });
+
+  photoGalleryEl?.addEventListener('change', (event) => {
+    const card = event.target.closest?.('.photo-card');
+    if (!card) return;
+    flushPhotoSave(Number(card.dataset.photoId));
+  });
+
+  photoGalleryEl?.addEventListener('click', (event) => {
+    const card = event.target.closest?.('.photo-card');
+    if (!card) return;
+    const id = Number(card.dataset.photoId);
+
+    if (event.target.closest('[data-remove]')) {
+      event.preventDefault();
+      removePhotoItem(id);
+    } else if (event.target.closest('[data-move-up]')) {
+      event.preventDefault();
+      movePhotoBy(id, -1);
+    } else if (event.target.closest('[data-move-down]')) {
+      event.preventDefault();
+      movePhotoBy(id, 1);
+    }
+  });
+
+  photoGalleryEl?.addEventListener('dragstart', (event) => {
+    const handle = event.target.closest?.('[data-drag-handle]');
+    const card = handle?.closest('.photo-card');
+    if (!card) {
+      event.preventDefault();
+      return;
+    }
+
+    dragPhotoId = Number(card.dataset.photoId);
+    card.classList.add('is-dragging');
+    event.dataTransfer?.setData('text/plain', String(dragPhotoId));
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+
+  photoGalleryEl?.addEventListener('dragover', (event) => {
+    const card = event.target.closest?.('.photo-card');
+    if (!card || dragPhotoId === null) return;
+    if (Number(card.dataset.photoId) === dragPhotoId) return;
+
+    event.preventDefault();
+    clearDropClasses();
+    const rect = card.getBoundingClientRect();
+    const after = event.clientY > rect.top + rect.height / 2;
+    card.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  });
+
+  photoGalleryEl?.addEventListener('drop', (event) => {
+    if (dragPhotoId === null) return;
+    const card = event.target.closest?.('.photo-card');
+    if (!card) return;
+
+    event.preventDefault();
+    const after = card.classList.contains('is-drop-after');
+    movePhoto(dragPhotoId, Number(card.dataset.photoId), after);
+    dragPhotoId = null;
+    clearDropClasses();
+  });
+
+  photoGalleryEl?.addEventListener('dragend', () => {
+    dragPhotoId = null;
+    clearDropClasses();
+    photoGalleryEl?.querySelectorAll('.photo-card').forEach((card) => {
+      card.classList.remove('is-dragging');
+    });
+  });
+
   uploadBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (event) => {
@@ -340,13 +632,13 @@ export function initOverlay({ onStart, audio }) {
         existingCount: photoCount,
         maxPhotos: MAX_PHOTOS,
       });
-      photoCount = result.count;
+      await loadPhotoEditor();
       const summary = buildUploadSummary(result);
       setUploadStatus(summary.text, summary.tone);
       if (result.added > 0) markShareStale();
     } catch (error) {
       console.error('[upload] the batch could not be processed', error);
-      photoCount = await getPhotoCount().catch(() => photoCount);
+      await loadPhotoEditor().catch(() => {});
       setUploadStatus('The photos could not be added. Check browser storage and try again.', 'error');
     } finally {
       uploading = false;
@@ -359,6 +651,7 @@ export function initOverlay({ onStart, audio }) {
     input.addEventListener('input', () => {
       saveDetails(readDetails());
       markShareStale();
+      updateDraftStatus();
       refreshValidation();
     });
   }
@@ -466,7 +759,9 @@ export function initOverlay({ onStart, audio }) {
   resetBtn.addEventListener('click', async () => {
     if (uploading || sharing) return;
     await clearAllPhotos();
+    photoItems = [];
     photoCount = 0;
+    renderPhotoEditor();
     setUploadStatus('', 'ok');
     markShareStale();
     updatePhotoCount();
@@ -488,15 +783,11 @@ export function initOverlay({ onStart, audio }) {
   }
 
   refreshOverlayState = async () => {
-    photoCount = await getPhotoCount().catch(() => photoCount);
-    updatePhotoCount();
+    await loadPhotoEditor();
   };
 
-  getPhotoCount().then((count) => {
-    photoCount = count;
-    updatePhotoCount();
-  });
-
+  loadPhotoEditor();
+  updateDraftStatus();
   refreshValidation();
 }
 
