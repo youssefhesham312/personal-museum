@@ -90,25 +90,25 @@ export function initOverlay({ onStart, audio }) {
       <div class="creator-fields">
         <label class="creator-field" for="museum-title">
           <span>${t('creator.museumTitle')}</span>
-          <input id="museum-title" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxTitleLength}" autocomplete="off" placeholder="${t('creator.museumTitlePlaceholder')}" />
+          <input id="museum-title" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxTitleLength}" autocomplete="off" />
           <small class="field-error" data-error-for="title"></small>
         </label>
 
         <label class="creator-field" for="museum-recipient">
           <span>${t('creator.recipient')}</span>
-          <input id="museum-recipient" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxNameLength}" autocomplete="off" placeholder="${t('creator.recipientPlaceholder')}" />
+          <input id="museum-recipient" type="text" dir="auto" maxlength="${MUSEUM_LIMITS.maxNameLength}" autocomplete="off" />
           <small class="field-error" data-error-for="recipient"></small>
         </label>
 
         <label class="creator-field" for="museum-dedication">
           <span>${t('creator.dedication')} <em>${t('creator.optional')}</em></span>
-          <textarea id="museum-dedication" rows="2" dir="auto" maxlength="${MUSEUM_LIMITS.maxDedicationLength}" placeholder="${t('creator.dedicationPlaceholder')}"></textarea>
+          <textarea id="museum-dedication" rows="2" dir="auto" maxlength="${MUSEUM_LIMITS.maxDedicationLength}"></textarea>
           <small class="field-error" data-error-for="dedication"></small>
         </label>
 
         <label class="creator-field" for="museum-final-message">
           <span>${t('creator.finalMessage')}</span>
-          <textarea id="museum-final-message" rows="3" dir="auto" maxlength="${MUSEUM_LIMITS.maxFinalMessageLength}" placeholder="${t('creator.finalMessagePlaceholder')}"></textarea>
+          <textarea id="museum-final-message" rows="3" dir="auto" maxlength="${MUSEUM_LIMITS.maxFinalMessageLength}"></textarea>
           <small class="field-error" data-error-for="finalMessage"></small>
         </label>
       </div>
@@ -390,7 +390,7 @@ export function initOverlay({ onStart, audio }) {
           <p class="photo-name" dir="auto"></p>
           <label class="photo-field" for="${captionId}">
             <span>${t('creator.caption')} <em>${t('creator.optional')}</em></span>
-            <input id="${captionId}" type="text" dir="auto" data-photo-caption maxlength="${MUSEUM_LIMITS.maxCaptionLength}" placeholder="${t('creator.captionPlaceholder')}" />
+            <input id="${captionId}" type="text" dir="auto" data-photo-caption maxlength="${MUSEUM_LIMITS.maxCaptionLength}" />
           </label>
         </div>
         <div class="photo-actions">
