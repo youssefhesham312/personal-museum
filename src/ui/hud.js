@@ -63,7 +63,7 @@ export function initHud({ onExit, onInteract, onTogglePlay, onToggleMute, onTogg
       <button class="hud-icon" type="button" data-touch-ui data-action="play" aria-label="${t('hud.pauseMusic')}" aria-pressed="true">${ICON_PAUSE}</button>
       <button class="hud-icon" type="button" data-touch-ui data-action="mute" aria-label="${t('hud.muteMusic')}" aria-pressed="false">${ICON_SOUND}</button>
       <button class="hud-icon hud-help" type="button" data-touch-ui data-action="help" aria-label="${t('hud.showControls')}" aria-expanded="false">?</button>
-      <button class="hud-icon hud-lang" type="button" data-touch-ui data-action="language" aria-label="${getLanguage() === 'ar' ? t('language.switchToEnglish') : t('language.switchToArabic')}">${getLanguage() === 'ar' ? 'EN' : 'ع'}</button>
+      <button class="hud-icon hud-lang" type="button" data-touch-ui data-action="language" aria-label="${getLanguage() === 'ar' ? 'EN' : 'ع'} — ${getLanguage() === 'ar' ? t('language.switchToEnglish') : t('language.switchToArabic')}">${getLanguage() === 'ar' ? 'EN' : 'ع'}</button>
     </div>
     <div class="hud-bar hud-bar--right">
       <button class="hud-btn hud-btn--exit" type="button" data-touch-ui data-action="exit">${t('hud.leaveMuseum')}</button>

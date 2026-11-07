@@ -82,7 +82,7 @@ export function initOverlay({ onStart, audio }) {
   overlay.innerHTML = `
     <div class="menu-panel creator-panel">
       <div class="creator-topbar">
-        <button class="lang-toggle" id="lang-toggle" type="button" aria-label="${switchAria}">${switchLabel}</button>
+        <button class="lang-toggle" id="lang-toggle" type="button" aria-label="${switchLabel} — ${switchAria}">${switchLabel}</button>
       </div>
       <h1>${t('app.title')}</h1>
       <p class="subtitle">${t('app.subtitle')}</p>
