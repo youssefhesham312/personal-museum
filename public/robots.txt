@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+# Shared museums are private, unguessable links. Keep them out of search indexes.
+Disallow: /m/
